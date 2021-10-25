@@ -15,5 +15,6 @@
     "html-validate": "^4.0.0",
     "parcel": "^2.0.0-beta.1",
     "typescript": "^4.0.3"
-  }
+  },
+  "version": "0.0.0"
 }
