@@ -86,6 +86,15 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
                                 case 'autofft':
                                     autoFft = Boolean(Number(w));
                                     break;
+
+                                case 'cp':
+                                    const [f, m, p] = w.split(';');
+                                    components.push({
+                                        frequency: Number(f),
+                                        magnitude: Number(m),
+                                        phase: Number(p),
+                                    });
+                                    break;
                             }
                         }
                     }
@@ -153,6 +162,14 @@ canvas.onpointerup = function(e) {
 
 document.getElementById('clear-button')!.onclick = function() {
     rawPoints?.splice(rawPoints.length);
+    //pathReinitialization();
+
+    points.splice(0, points.length);
+    unclosedLength = 0;
+    unclosedPath = new Path2D();
+    components.splice(0, components.length);
+    //rawPoints?.forEach(pt => addPoint(pt.x, pt.y, false));
+
     redraw();
 };
 
