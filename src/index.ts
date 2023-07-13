@@ -17,6 +17,7 @@ let parameter = 0;
 let complexity = 0;
 let circles = false;
 let hasCapture = false;
+let steps = false;
 
 const parameterSlider = document.getElementById('parameter-slider') as HTMLInputElement;
 parameterSlider.oninput = function() {
@@ -33,6 +34,15 @@ complexityCircles.oninput = function() {
     circles = complexityCircles.checked;
     redraw();
 };
+const pointSteps = document.getElementById('points-steps-check') as HTMLInputElement;
+pointSteps.oninput = function() {
+    steps = pointSteps.checked;
+    pointsStepsPoint.hidden
+        = !(pointsStepsLabel.hidden
+            = steps);
+};
+const pointsStepsPoint = document.getElementById('points-steps-check-point') as HTMLInputElement;
+const pointsStepsLabel = document.getElementById('points-steps-check-label') as HTMLInputElement;
 
 function updateCanvasSize() {
     canvas.width = window.devicePixelRatio * canvas.clientWidth;
@@ -40,11 +50,15 @@ function updateCanvasSize() {
 }
 
 function loadLocation() { // Inspiration from https://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript/21152762#21152762 (qd's not stored)
-    window.location.search?.substr(1).split('&')
+    window.location.search?.substring(1).split('&')
         .forEach(item => {
             switch (item) {
                 case 'circles':
                     complexityCircles.checked = true;
+                    break;
+
+                case 'steps':
+                    pointSteps.checked = true;
                     break;
 
                 default:
@@ -87,6 +101,10 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
                                             components.push({ frequency: Number(f), magnitude: Number(m), phase: Number(p) });
                                     }
                                     break;
+
+                                case 'steps':
+                                    pointSteps.checked = Boolean(Number(w));
+                                    break;
                             }
                         }
                     }
@@ -124,7 +142,7 @@ function setComponentsLocation() {
 }
 
 function setLocation(complement: string) {
-    const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameter + '&' + 'complexity=' + complexity + '&' + 'circles=' + Number(circles) + complement;
+    const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameter + '&' + 'complexity=' + complexity + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
     history.pushState(null, '', newRelativePathQuery);
 }
 
@@ -136,6 +154,10 @@ function initControls() {
     complexity = complexityNumber.valueAsNumber;
 
     circles = complexityCircles.checked;
+    steps = pointSteps.checked;
+    pointsStepsPoint.hidden
+        = !(pointsStepsLabel.hidden
+            = steps);
     redraw();
 }
 
@@ -153,13 +175,13 @@ canvas.onpointerdown = function(e) {
 };
 
 canvas.ontouchstart = canvas.ontouchmove = function(e) {
-    if (e.touches.length === 1) {
+    if (e.touches.length === 1)
         e.preventDefault();
-    }
 };
 
 canvas.onpointermove = function(e) {
-    if (hasCapture) addPoint(e.offsetX, e.offsetY);
+    if (hasCapture)
+        addPoint(e.offsetX, e.offsetY);
 };
 
 canvas.onpointerup = function(e) {
@@ -185,9 +207,9 @@ function magnitude(x: number, y: number) { return Math.sqrt(x * x + y * y); }
 function lerp(first: number, second: number, t: number) { return first + (second - first) * t; }
 
 function addPoint(x: number, y: number, draw = true) {
-    if (points.length === 0) {
+    if (points.length === 0)
         points.push({ x, y, segmentLength: 0 });
-    } else {
+    else {
         const previousPoint = points[Math.max(0, points.length - 2)];
         const segmentLength = magnitude(x - previousPoint.x, y - previousPoint.y);
         unclosedLength += segmentLength;
@@ -205,11 +227,11 @@ function addPoint(x: number, y: number, draw = true) {
         samplePathIntoInput();
         fft.transform(output, input);
         calculateSortedComponentsFromOutput();
-    } else {
+    } else
         components.splice(0, components.length);
-    }
 
-    if (draw) redraw();
+    if (draw)
+        redraw();
 }
 
 function samplePathIntoInput() {
@@ -282,9 +304,9 @@ function redraw() {
                     // context.arc do take the x-rightmost point as 0rad, and pathes cursor from the previous position to the modulated position of the center+ray distance circle.
                     // context.arc(A, B, Math.Pi, 2 * Math.Pi) will draw a top-half circle (having it's center on [A, B]), with a line reaching [A, B] if the cursor was not already on this position.
                     // ^ There is no use to begin circles from the [newX, newY] point, as it'd still require the ray calculation, and introduces a new angle -> angle + 2*PI calculation.
-                } else {
+                } else
                     lines.splice(0, lines.length); // Reset lines
-                }
+
                 lines.push({ x: newX, y: newY }); // Draw the line starting from old to new coords
 
                 x = newX;
@@ -295,9 +317,8 @@ function redraw() {
 
             context.beginPath();
             context.moveTo(lines[0].x, lines[0].y);
-            for (let i = 1; i < lines.length; i++) {
+            for (let i = 1; i < lines.length; i++)
                 context.lineTo(lines[i].x, lines[i].y);
-            }
             context.strokeStyle = 'red';
             context.stroke();
 
@@ -311,9 +332,8 @@ function redraw() {
 
         if (complexity > 0) { // Show complexity path
             context.beginPath();
-            for (let cp = 0; cp < fftSize; cp++) {
+            for (let cp = 0; cp < fftSize; cp++)
                 drawComponentsLineOut(maxI, (cp * pi2 / fftSize), _x, _y);
-            }
             drawComponentsLineOut(maxI, 0, _x, _y); // End loop
             context.strokeStyle = 'green';
             context.stroke();
