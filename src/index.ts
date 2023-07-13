@@ -273,6 +273,15 @@ complexityCircles.oninput = function() {
     parameterManager.circles = complexityCircles.checked;
     redraw();
 };
+const pointSteps = document.getElementById('points-steps-check') as HTMLInputElement;
+pointSteps.oninput = function() {
+    steps = pointSteps.checked;
+    pointsStepsPoint.hidden
+        = !(pointsStepsLabel.hidden
+            = steps);
+};
+const pointsStepsPoint = document.getElementById('points-steps-check-point') as HTMLInputElement;
+const pointsStepsLabel = document.getElementById('points-steps-check-label') as HTMLInputElement;
 
 function updateCanvasSize() {
     canvas.width = window.devicePixelRatio * canvas.clientWidth;
@@ -285,6 +294,10 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
             switch (item) {
                 case 'circles':
                     complexityCircles.checked = true;
+                    break;
+
+                case 'steps':
+                    pointSteps.checked = true;
                     break;
 
                 default: { // no-case-declaration
@@ -329,6 +342,10 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
                             processDecode(c, t, e);
                         }
                             break;
+
+                        case 'steps':
+                            pointSteps.checked = Boolean(Number(w));
+                            break;
                     }
                 }
                     break;
@@ -360,7 +377,7 @@ function setLocation(complement: string | null) {
     if (complement === null)
         return;
 
-    const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameterManager.parameter + '&' + 'complexity=' + parameterManager.complexity + '&' + 'circles=' + Number(parameterManager.circles) + complement;
+    const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameterManager.parameter + '&' + 'complexity=' + parameterManager.complexity + '&' + 'circles=' + Number(parameterManager.circles) + '&' + 'steps=' + Number(steps) + complement;
     history.pushState(null, '', newRelativePathQuery);
 }
 
@@ -419,6 +436,10 @@ function initControls() {
     parameterManager.complexity = complexityNumber.valueAsNumber;
 
     parameterManager.circles = complexityCircles.checked;
+    steps = pointSteps.checked;
+    pointsStepsPoint.hidden
+        = !(pointsStepsLabel.hidden
+            = steps);
     redraw();
 }
 
