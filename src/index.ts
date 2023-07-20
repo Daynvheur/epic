@@ -263,6 +263,11 @@ parameterSlider.oninput = function() {
     parameterManager.parameter = parameterSlider.valueAsNumber;
     redraw();
 };
+const fftNumber = document.getElementById('fft-number') as HTMLInputElement;
+fftNumber.oninput = function() {
+	changeFftSize(fftNumber.valueAsNumber);
+	redraw();
+};
 const complexityNumber = document.getElementById('complexity-number') as HTMLInputElement;
 complexityNumber.oninput = function() {
     parameterManager.complexity = complexityNumber.valueAsNumber;
@@ -275,30 +280,30 @@ complexityCircles.oninput = function() {
 };
 const pointSteps = document.getElementById('points-steps-check') as HTMLInputElement;
 pointSteps.oninput = function() {
-    steps = pointSteps.checked;
-    pointsStepsPoint.hidden
-        = !(pointsStepsLabel.hidden
-            = steps);
+	steps = pointSteps.checked;
+	pointsStepsPoint.hidden
+		= !(pointsStepsLabel.hidden
+			= steps);
 };
 const pointsStepsPoint = document.getElementById('points-steps-check-point') as HTMLInputElement;
 const pointsStepsLabel = document.getElementById('points-steps-check-label') as HTMLInputElement;
 
 function updateCanvasSize() {
-    canvas.width = window.devicePixelRatio * canvas.clientWidth;
-    canvas.height = window.devicePixelRatio * canvas.clientHeight;
+	canvas.width = window.devicePixelRatio * canvas.clientWidth;
+	canvas.height = window.devicePixelRatio * canvas.clientHeight;
 }
 
 function loadLocation() { // Inspiration from https://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript/21152762#21152762 (qd's not stored)
-    window.location.search?.substring(1).split('&')
-        .forEach(item => {
-            switch (item) {
-                case 'circles':
-                    complexityCircles.checked = true;
-                    break;
+	window.location.search?.substring(1).split('&')
+		.forEach(item => {
+			switch (item) {
+				case 'circles':
+					complexityCircles.checked = true;
+					break;
 
-                case 'steps':
-                    pointSteps.checked = true;
-                    break;
+				case 'steps':
+					pointSteps.checked = true;
+					break;
 
                 default: { // no-case-declaration
                     const [k, v] = item.split('=');
@@ -457,8 +462,8 @@ canvas.onpointerdown = function(e) {
 };
 
 canvas.ontouchstart = canvas.ontouchmove = function(e) {
-    if (e.touches.length === 1)
-        e.preventDefault();
+	if (e.touches.length === 1)
+		e.preventDefault();
 };
 
 canvas.onpointermove = function(e) {
@@ -477,6 +482,9 @@ document.getElementById('clear-button')!.onclick = function() {
     componentsManager.clear();
     redraw();
 };
+
+document.getElementById('save-points-button')!.onclick = setPointsLocation;
+document.getElementById('save-components-button')!.onclick = setComponentsLocation;
 
 document.getElementById('save-points-raw-button')!.onclick = () => setPointsLocation();
 document.getElementById('save-points-b64-button')!.onclick = () => setPointsLocation('btoa');
@@ -513,8 +521,8 @@ function addPoint(x: number, y: number) {
 }
 
 function redraw() {
-    context.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
-    context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+	context.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+	context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
     if (componentsManager.unclosedLength > 0) {
         const closedPath = new Path2D(componentsManager.unclosedPath);
@@ -546,11 +554,11 @@ function redraw() {
 
                 componentsManager.pushLine({ x: newX, y: newY }); // Draw the line starting from old to new coords
 
-                x = newX;
-                y = newY;
-            }
-            context.strokeStyle = 'burlywood';
-            context.stroke();
+				x = newX;
+				y = newY;
+			}
+			context.strokeStyle = 'burlywood';
+			context.stroke();
 
             context.beginPath();
             const firstLine = componentsManager.lines[0];
