@@ -13,16 +13,27 @@ let input = fft.createComplexArray() as number[];
 let output = fft.createComplexArray() as number[];
 const components = new Array<{ frequency: number, magnitude: number, phase: number }>();
 const lines = new Array<{ x: number, y: number }>();
+let autoplay = false;
 let parameter = 0;
+let repeatplay = false;
 let complexity = 0;
 let circles = false;
 let hasCapture = false;
 let steps = false;
 
+const parameterAutoplay = document.getElementById('autoplay-parameter-check') as HTMLInputElement;
+parameterAutoplay.oninput = function() {
+	autoplay = parameterAutoplay.checked;
+	autoplayCallback();
+};
 const parameterSlider = document.getElementById('parameter-slider') as HTMLInputElement;
 parameterSlider.oninput = function() {
 	parameter = parameterSlider.valueAsNumber;
 	redraw();
+};
+const parameterReplay = document.getElementById('repeatplay-parameter-check') as HTMLInputElement;
+parameterReplay.oninput = function() {
+	repeatplay = parameterReplay.checked;
 };
 const fftNumber = document.getElementById('fft-number') as HTMLInputElement;
 fftNumber.oninput = function() {
@@ -59,11 +70,19 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 		.forEach(item => {
 			switch (item) {
 				case 'circles':
-					complexityCircles.checked = true;
+					circles = complexityCircles.checked = true;
 					break;
 
 				case 'steps':
-					pointSteps.checked = true;
+					steps = pointSteps.checked = true;
+					break;
+
+				case 'autoplay':
+					autoplay = parameterAutoplay.checked = true;
+					break;
+
+				case 'replay':
+					repeatplay = parameterReplay.checked = true;
 					break;
 
 				default:
@@ -80,8 +99,16 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 									}
 									break;
 
+								case 'autoplay':
+									autoplay = parameterAutoplay.checked = Boolean(Number(w));
+									break;
+
 								case 'range':
 									parameterSlider.value = w;
+									break;
+
+								case 'replay':
+									repeatplay = parameterReplay.checked = Boolean(Number(w));
 									break;
 
 								case 'complexity':
@@ -93,7 +120,7 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 									break;
 
 								case 'circles':
-									complexityCircles.checked = Boolean(Number(w));
+									circles = complexityCircles.checked = Boolean(Number(w));
 									break;
 
 								case 'cp':
@@ -105,7 +132,7 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 									break;
 
 								case 'steps':
-									pointSteps.checked = Boolean(Number(w));
+									steps = pointSteps.checked = Boolean(Number(w));
 									break;
 							}
 						}
@@ -166,7 +193,7 @@ function setComponentsLocation() {
 }
 
 function setLocation(complement: string) {
-	const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameter + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
+	const newRelativePathQuery = window.location.pathname + '?' + 'autoplay=' + Number(autoplay) + '&' + 'range=' + parameter + '&' + 'replay=' + Number(repeatplay) + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
 	history.pushState(null, '', newRelativePathQuery);
 }
 
@@ -184,6 +211,7 @@ function initControls() {
 			= steps);
 
 	redraw();
+	autoplayCallback();
 }
 
 window.addEventListener('resize', function() { updateCanvasSize(); redraw(); });
@@ -221,6 +249,9 @@ document.getElementById('clear-button')!.onclick = function() {
 	unclosedLength = 0;
 	unclosedPath = new Path2D();
 	components.splice(0, components.length);
+
+	// reset computed Paths here
+
 	redraw();
 };
 
@@ -232,6 +263,8 @@ function magnitude(x: number, y: number) { return Math.sqrt(x * x + y * y); }
 function lerp(first: number, second: number, t: number) { return first + (second - first) * t; }
 
 function addPoint(x: number, y: number, draw = true) {
+	// reset computed Paths here
+
 	if (points.length === 0)
 		points.push({ x, y, segmentLength: 0 });
 	else {
@@ -311,16 +344,19 @@ function redraw() {
 	context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
 	if (unclosedLength > 0) {
+		// fetch computed closedPath, else ->
 		const closedPath = new Path2D(unclosedPath);
 		closedPath.closePath();
 		context.strokeStyle = 'black';
 		context.stroke(closedPath);
+		// store computed closedPath
 	}
 
 	if (components.length > 0) {
 		const maxI = Math.min(components.length, (complexity <= 0 ? components.length : (complexity + 1))), pi2 = 2 * Math.PI, p = (parameter * pi2 / fftSize), _x = 0, _y = 0;
 
 		if (circles) { // Draw arcs?
+			// fetch computed circlePath for this parameter, else ->
 			let x = _x, y = _y;
 			context.beginPath();
 			for (let i = 0; i < maxI; i++) {
@@ -345,29 +381,36 @@ function redraw() {
 			}
 			context.strokeStyle = 'burlywood';
 			context.stroke();
+			// store computed circlePath for this parameter
 
+			// fetch computed linePath for this parameter, else ->
 			context.beginPath();
 			context.moveTo(lines[0].x, lines[0].y);
 			for (let i = 1; i < lines.length; i++)
 				context.lineTo(lines[i].x, lines[i].y);
 			context.strokeStyle = 'red';
 			context.stroke();
+			// store computed linePath for this parameter
 
 			lines.splice(0, lines.length); // Reset lines
 		} else {
+			// fetch computed linePath for this parameter, else ->
 			context.beginPath();
 			drawComponentsLineIn(maxI, p, _x, _y);
 			context.strokeStyle = 'red';
 			context.stroke();
+			// store computed linePath for this parameter
 		}
 
 		if (complexity > 0) { // Show complexity path
+			// fetch computed complexityPath, else ->
 			context.beginPath();
 			for (let cp = 0; cp < fftSize; cp++)
 				drawComponentsLineOut(maxI, (cp * pi2 / fftSize), _x, _y);
 			drawComponentsLineOut(maxI, 0, _x, _y); // End loop
 			context.strokeStyle = 'green';
 			context.stroke();
+			// store computed complexityPath
 		}
 	}
 
@@ -390,4 +433,26 @@ function redraw() {
 		}
 		context.lineTo(x, y);
 	}
+}
+
+function autoplayCallback() {
+	if (!autoplay)
+		return;
+	if (parameterSlider.value === parameterSlider.max)
+		if (!repeatplay)
+			return;
+		else
+			parameterSlider.value = parameterSlider.min;
+
+	parameterSlider.valueAsNumber++;
+	dispatchEvent(parameterSlider);
+
+	setTimeout(autoplayCallback, 100);
+}
+
+function dispatchEvent(element: HTMLInput) {
+	const event = document.createEvent('Event');
+	event.initEvent('input', true, true);
+
+	element.dispatchEvent(event);
 }
