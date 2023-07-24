@@ -257,11 +257,28 @@ const context = canvas.getContext('2d')!;
 const parameterManager = new ParameterManager();
 const fftManager = new FftManager(parameterManager.advisedFft());
 const componentsManager = new ComponentsManager();
+let autoplay = false;
+let parameter = 0;
+let repeatplay = false;
+let complexity = 0;
+let circles = false;
+let hasCapture = false;
+let steps = false;
+
+const parameterAutoplay = document.getElementById('autoplay-parameter-check') as HTMLInputElement;
+parameterAutoplay.oninput = function () {
+    autoplay = parameterAutoplay.checked;
+    autoplayCallback();
+};
 
 const parameterSlider = document.getElementById('parameter-slider') as HTMLInputElement;
 parameterSlider.oninput = function() {
     parameterManager.parameter = parameterSlider.valueAsNumber;
     redraw();
+};
+const parameterReplay = document.getElementById('repeatplay-parameter-check') as HTMLInputElement;
+parameterReplay.oninput = function() {
+	repeatplay = parameterReplay.checked;
 };
 const fftNumber = document.getElementById('fft-number') as HTMLInputElement;
 fftNumber.oninput = function() {
@@ -298,12 +315,20 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 		.forEach(item => {
 			switch (item) {
 				case 'circles':
-					complexityCircles.checked = true;
+					circles = complexityCircles.checked = true;
 					break;
 
 				case 'steps':
-					pointSteps.checked = true;
-					break;
+					steps = pointSteps.checked = true;
+                    break;
+
+                case 'autoplay':
+                    autoplay = parameterAutoplay.checked = true;
+                    break;
+
+                case 'replay':
+                    repeatplay = parameterReplay.checked = true;
+                    break;
 
                 default: { // no-case-declaration
                     const [k, v] = item.split('=');
@@ -319,9 +344,17 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
                                 loadPoint(w);
                             break;
 
-                        case 'range':
-                            parameterSlider.value = w;
-                            break;
+								case 'autoplay':
+									autoplay = parameterAutoplay.checked = Boolean(Number(w));
+									break;
+
+								case 'range':
+									parameterSlider.value = w;
+									break;
+
+								case 'replay':
+									repeatplay = parameterReplay.checked = Boolean(Number(w));
+									break;
 
                         case 'circles':
                             complexityCircles.checked = Boolean(Number(w));
@@ -348,14 +381,15 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
                         }
                             break;
 
-                        case 'steps':
-                            pointSteps.checked = Boolean(Number(w));
-                            break;
-                    }
-                }
-                    break;
-            }
-        });
+								case 'steps':
+									steps = pointSteps.checked = Boolean(Number(w));
+									break;
+							}
+						}
+					}
+					break;
+			}
+		});
 }
 
 function loadPoint(w: string) {
@@ -382,7 +416,7 @@ function setLocation(complement: string | null) {
     if (complement === null)
         return;
 
-    const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameterManager.parameter + '&' + 'complexity=' + parameterManager.complexity + '&' + 'circles=' + Number(parameterManager.circles) + '&' + 'steps=' + Number(steps) + complement;
+    const newRelativePathQuery = window.location.pathname + '?' + 'autoplay=' + Number(autoplay) + '&' + 'range=' + parameter + '&' + 'replay=' + Number(repeatplay) + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
     history.pushState(null, '', newRelativePathQuery);
 }
 
@@ -441,11 +475,13 @@ function initControls() {
     parameterManager.complexity = complexityNumber.valueAsNumber;
 
     parameterManager.circles = complexityCircles.checked;
-    steps = pointSteps.checked;
-    pointsStepsPoint.hidden
-        = !(pointsStepsLabel.hidden
-            = steps);
-    redraw();
+	steps = pointSteps.checked;
+	pointsStepsPoint.hidden
+		= !(pointsStepsLabel.hidden
+			= steps);
+
+	redraw();
+	autoplayCallback();
 }
 
 window.addEventListener('resize', function() { updateCanvasSize(); redraw(); });
@@ -559,6 +595,7 @@ function redraw() {
 			}
 			context.strokeStyle = 'burlywood';
 			context.stroke();
+			// store computed circlePath for this parameter
 
             context.beginPath();
             const firstLine = componentsManager.lines[0];
@@ -600,13 +637,35 @@ function redraw() {
         }
     }
 
-    function drawComponentsLineOut(maxI: number, p: number, x: 0, y: 0) {
-        for (let i = 0; i < maxI; i++) {
+	function drawComponentsLineOut(maxI: number, p: number, x: 0, y: 0) {
+		for (let i = 0; i < maxI; i++) {
             const component = componentsManager.components[i];
-            const angle = p * component.frequency + component.phase;
-            x += component.magnitude * Math.cos(angle);
-            y += component.magnitude * Math.sin(angle);
-        }
-        context.lineTo(x, y);
-    }
+			const angle = p * component.frequency + component.phase;
+			x += component.magnitude * Math.cos(angle);
+			y += component.magnitude * Math.sin(angle);
+		}
+		context.lineTo(x, y);
+	}
+}
+
+function autoplayCallback() {
+	if (!autoplay)
+		return;
+	if (parameterSlider.value === parameterSlider.max)
+		if (!repeatplay)
+			return;
+		else
+			parameterSlider.value = parameterSlider.min;
+
+	parameterSlider.valueAsNumber++;
+	dispatchEvent(parameterSlider);
+
+	setTimeout(autoplayCallback, 100);
+}
+
+function dispatchEvent(element: HTMLInput) {
+	const event = document.createEvent('Event');
+	event.initEvent('input', true, true);
+
+	element.dispatchEvent(event);
 }
