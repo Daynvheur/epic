@@ -7,6 +7,10 @@ const event = document.createEvent('Event'); // Baseliner event (do not trust re
 const points = new Array<{ x: number, y: number, segmentLength: number }>();
 let unclosedLength = 0;
 let unclosedPath = new Path2D();
+let closedPath: Path2D | null = null;
+let complexityPath: Path2D | null = null;
+let circlePath: [Path2D] | [] = [];
+let linePath: [Path2D] | [] = [];
 
 let fftSize = 4096;
 let fft = new FFT(fftSize);
@@ -20,7 +24,7 @@ let repeatplay = false;
 let complexity = 0;
 let circles = false;
 let hasCapture = false;
-let playwait = 4096.0 / fftSize;
+let playwait = 20480.0 / fftSize;
 
 const parameterAutoplay = document.getElementById('autoplay-parameter-check') as HTMLInputElement;
 parameterAutoplay.oninput = function() {
@@ -149,7 +153,7 @@ function changeFftSize(w: number) {
 	fft = new FFT(fftSize);
 	input = fft.createComplexArray() as number[];
 	output = fft.createComplexArray() as number[];
-	playwait = 4096.0 / fftSize;
+	playwait = 20480.0 / fftSize;
 	computeFft();
 }
 
@@ -207,6 +211,7 @@ initControls();
 canvas.onpointerdown = function(e) {
 	if (e.button === 0) {
 		hasCapture = true;
+		autoplay = false;
 		canvas.setPointerCapture(e.pointerId);
 		addPoint(e.offsetX, e.offsetY);
 	}
@@ -226,6 +231,8 @@ canvas.onpointerup = function(e) {
 	if (hasCapture) {
 		hasCapture = false;
 		canvas.releasePointerCapture(e.pointerId);
+		autoplay = parameterAutoplay.checked;
+		autoplayCallback();
 	}
 };
 
@@ -235,6 +242,7 @@ document.getElementById('clear-button')!.onclick = function() {
 	unclosedPath = new Path2D();
 	components.splice(0, components.length);
 
+	autoplay = parameterAutoplay.checked = false;
 	// reset computed Paths here
 
 	redraw();
@@ -248,8 +256,6 @@ function magnitude(x: number, y: number) { return Math.sqrt(x * x + y * y); }
 function lerp(first: number, second: number, t: number) { return first + (second - first) * t; }
 
 function addPoint(x: number, y: number, draw = true) {
-	// reset computed Paths here
-
 	if (points.length === 0)
 		points.push({ x, y, segmentLength: 0 });
 	else {
@@ -278,6 +284,12 @@ function computeFft() {
 		samplePathIntoInput();
 		fft.transform(output, input);
 		calculateSortedComponentsFromOutput();
+
+		// reset computed Paths here
+		closedPath = null;
+		complexityPath = null;
+		circlePath = [];
+		linePath = [];
 		return true;
 	} else
 		return false;
@@ -329,94 +341,101 @@ function redraw() {
 	context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
 	if (unclosedLength > 0) {
-		// fetch computed closedPath, else ->
-		const closedPath = new Path2D(unclosedPath);
-		closedPath.closePath();
+		if (closedPath === null) { // Compute closedPath?
+			closedPath = new Path2D(unclosedPath);
+			closedPath.closePath();
+		}
 		context.strokeStyle = 'black';
 		context.stroke(closedPath);
-		// store computed closedPath
 	}
 
 	if (components.length > 0) {
 		const maxI = Math.min(components.length, (complexity <= 0 ? components.length : (complexity + 1))), pi2 = 2 * Math.PI, p = (parameter * pi2 / fftSize), _x = 0, _y = 0;
 
 		if (circles) { // Draw arcs?
-			// fetch computed circlePath for this parameter, else ->
-			let x = _x, y = _y;
-			context.beginPath();
-			for (let i = 0; i < maxI; i++) {
-				const component = components[i];
-				const angle = p * component.frequency + component.phase;
-				const newX = x + component.magnitude * Math.cos(angle);
-				const newY = y + component.magnitude * Math.sin(angle);
-				if (i >= 1) { // (min first segment)
-					const ray = Math.sqrt(Math.pow(newX - x, 2) + Math.pow(newY - y, 2));
-					context.moveTo(x, y); // Move to the center, drawing a line to the right most circle point (0°)
-					context.arc(x, y, ray, 0, pi2); // Draw the circle starting from 0 rad (0°) to 2*PI rad (360°)
-					// context.arc do take the x-rightmost point as 0rad, and pathes cursor from the previous position to the modulated position of the center+ray distance circle.
-					// context.arc(A, B, Math.Pi, 2 * Math.Pi) will draw a top-half circle (having it's center on [A, B]), with a line reaching [A, B] if the cursor was not already on this position.
-					// ^ There is no use to begin circles from the [newX, newY] point, as it'd still require the ray calculation, and introduces a new angle -> angle + 2*PI calculation.
-				} else
-					lines.splice(0, lines.length); // Reset lines
+			if (!(p in circlePath)) { // Compute circlePath[p]?
+				const path = new Path2D();
 
-				lines.push({ x: newX, y: newY }); // Draw the line starting from old to new coords
+				let x = _x, y = _y;
 
-				x = newX;
-				y = newY;
+				for (let i = 0; i < maxI; i++) {
+					const component = components[i];
+					const angle = p * component.frequency + component.phase;
+					const newX = x + component.magnitude * Math.cos(angle);
+					const newY = y + component.magnitude * Math.sin(angle);
+
+					if (i < 1)
+						lines.splice(0, lines.length); // Reset lines
+					else { // (min first segment)
+						const ray = Math.sqrt(Math.pow(newX - x, 2) + Math.pow(newY - y, 2));
+						path.moveTo(x, y); // Move to the center, drawing a line to the right most circle point (0°)
+						path.arc(x, y, ray, 0, pi2); // Draw the circle starting from 0 rad (0°) to 2*PI rad (360°)
+						// path.arc do take the x-rightmost point as 0rad, and pathes cursor from the previous position to the modulated position of the center+ray distance circle.
+						// path.arc(A, B, Math.Pi, 2 * Math.Pi) will draw a top-half circle (having it's center on [A, B]), with a line reaching [A, B] if the cursor was not already on this position.
+						// ^ There is no use to begin circles from the [newX, newY] point, as it'd still require the ray calculation, and introduces a new angle -> angle + 2*PI calculation.
+					}
+
+					lines.push({ x: newX, y: newY }); // Draw the line starting from old to new coords
+
+					x = newX;
+					y = newY;
+				}
+				circlePath[p] = path; // Store computation
 			}
 			context.strokeStyle = 'burlywood';
-			context.stroke();
-			// store computed circlePath for this parameter
+			context.stroke(circlePath[p]);
 
-			// fetch computed linePath for this parameter, else ->
-			context.beginPath();
-			context.moveTo(lines[0].x, lines[0].y);
-			for (let i = 1; i < lines.length; i++)
-				context.lineTo(lines[i].x, lines[i].y);
+			if (!(p in linePath)) { // Compute linePath[p]?
+				const path = new Path2D();
+				path.moveTo(lines[0].x, lines[0].y);
+				for (let i = 1; i < lines.length; i++)
+					path.lineTo(lines[i].x, lines[i].y);
+				linePath[p] = path; // Store computation
+			}
 			context.strokeStyle = 'red';
-			context.stroke();
-			// store computed linePath for this parameter
+			context.stroke(linePath[p]);
 
 			lines.splice(0, lines.length); // Reset lines
 		} else {
-			// fetch computed linePath for this parameter, else ->
-			context.beginPath();
-			drawComponentsLineIn(maxI, p, _x, _y);
+			if (!(p in linePath)) { // Compute linePath[p]?
+				const path = new Path2D();
+				drawComponentsLineIn(maxI, p, _x, _y, path);
+				linePath[p] = path; // Store computation
+			}
 			context.strokeStyle = 'red';
-			context.stroke();
-			// store computed linePath for this parameter
+			context.stroke(linePath[p]);
 		}
 
 		if (complexity > 0) { // Show complexity path
-			// fetch computed complexityPath, else ->
-			context.beginPath();
-			for (let cp = 0; cp < fftSize; cp++)
-				drawComponentsLineOut(maxI, (cp * pi2 / fftSize), _x, _y);
-			drawComponentsLineOut(maxI, 0, _x, _y); // End loop
+			if (complexityPath === null) { // Compute complexityPath?
+				complexityPath = new Path2D();
+				for (let cp = 0; cp < fftSize; cp++)
+					drawComponentsLineOut(maxI, (cp * pi2 / fftSize), _x, _y, complexityPath);
+				drawComponentsLineOut(maxI, 0, _x, _y, complexityPath); // End loop
+			}
 			context.strokeStyle = 'green';
-			context.stroke();
-			// store computed complexityPath
+			context.stroke(complexityPath);
 		}
 	}
 
-	function drawComponentsLineIn(maxI: number, p: number, x: 0, y: 0) {
+	function drawComponentsLineIn(maxI: number, p: number, x: 0, y: 0, path: Path2D) {
 		for (let i = 0; i < maxI; i++) {
 			const component = components[i];
 			const angle = p * component.frequency + component.phase;
 			x += component.magnitude * Math.cos(angle);
 			y += component.magnitude * Math.sin(angle);
-			context.lineTo(x, y);
+			path.lineTo(x, y);
 		}
 	}
 
-	function drawComponentsLineOut(maxI: number, p: number, x: 0, y: 0) {
+	function drawComponentsLineOut(maxI: number, p: number, x: 0, y: 0, path: Path2D) {
 		for (let i = 0; i < maxI; i++) {
 			const component = components[i];
 			const angle = p * component.frequency + component.phase;
 			x += component.magnitude * Math.cos(angle);
 			y += component.magnitude * Math.sin(angle);
 		}
-		context.lineTo(x, y);
+		path.lineTo(x, y);
 	}
 }
 
@@ -433,5 +452,5 @@ function autoplayCallback() {
 	parameterSlider.valueAsNumber++;
 	parameterSlider.oninput?.(event);
 
-	setTimeout(autoplayCallback, playwait);
+	setTimeout(autoplayCallback, Math.max(playwait, 5)); // 5ms wait time min (strict)
 }
