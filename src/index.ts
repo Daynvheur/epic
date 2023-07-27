@@ -2,6 +2,7 @@ import FFT from 'fft.js';
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d')!;
+const event = document.createEvent('Event'); // Baseliner event (do not trust residual data!)
 
 const points = new Array<{ x: number, y: number, segmentLength: number }>();
 let unclosedLength = 0;
@@ -20,6 +21,7 @@ let complexity = 0;
 let circles = false;
 let hasCapture = false;
 let steps = false;
+let playwait = 4096.0 / fftSize;
 
 const parameterAutoplay = document.getElementById('autoplay-parameter-check') as HTMLInputElement;
 parameterAutoplay.oninput = function() {
@@ -107,6 +109,10 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 									parameterSlider.value = w;
 									break;
 
+								case 'rangemax':
+									parameterSlider.max = w;
+									break;
+
 								case 'replay':
 									repeatplay = parameterReplay.checked = Boolean(Number(w));
 									break;
@@ -161,6 +167,7 @@ function changeFftSize(w: number) {
 	fft = new FFT(fftSize);
 	input = fft.createComplexArray() as number[];
 	output = fft.createComplexArray() as number[];
+	playwait = 4096.0 / fftSize;
 	computeFft();
 }
 
@@ -193,15 +200,15 @@ function setComponentsLocation() {
 }
 
 function setLocation(complement: string) {
-	const newRelativePathQuery = window.location.pathname + '?' + 'autoplay=' + Number(autoplay) + '&' + 'range=' + parameter + '&' + 'replay=' + Number(repeatplay) + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
+	const newRelativePathQuery = window.location.pathname + '?' + 'autoplay=' + Number(autoplay) + '&' + 'range=' + parameter + '&' + 'rangemax=' + parameterSlider.max + '&' + 'replay=' + Number(repeatplay) + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
 	history.pushState(null, '', newRelativePathQuery);
 }
 
 function initControls() {
-	parameterSlider.max = (fftSize - 1).toString();
+	parameterSlider.max = fftSize.toString();
 	parameter = parameterSlider.valueAsNumber;
 
-	complexityNumber.max = (fftSize - 1).toString();
+	// complexityNumber.max = fftSize.toString();
 	complexity = complexityNumber.valueAsNumber;
 
 	circles = complexityCircles.checked;
@@ -439,20 +446,14 @@ function autoplayCallback() {
 	if (!autoplay)
 		return;
 	if (parameterSlider.value === parameterSlider.max)
-		if (!repeatplay)
+		if (!repeatplay) {
+			autoplay = parameterAutoplay.checked = false;
 			return;
-		else
+		} else
 			parameterSlider.value = parameterSlider.min;
 
 	parameterSlider.valueAsNumber++;
-	dispatchEvent(parameterSlider);
+	parameterSlider.oninput?.(event);
 
-	setTimeout(autoplayCallback, 100);
-}
-
-function dispatchEvent(element: HTMLInput) {
-	const event = document.createEvent('Event');
-	event.initEvent('input', true, true);
-
-	element.dispatchEvent(event);
+	setTimeout(autoplayCallback, playwait);
 }
