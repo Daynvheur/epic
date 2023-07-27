@@ -46,6 +46,8 @@ class FftManager {
         this.input = this.fft.createComplexArray() as number[];
         this.output = this.fft.createComplexArray() as number[];
         this.lastChange = performance.now();
+
+        playwait = 4096.0 / fftSize;
     }
 
     computeFft(points: PointSegment[]) {
@@ -253,6 +255,7 @@ class ComponentsManager {
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d')!;
+const event = document.createEvent('Event'); // Baseliner event (do not trust residual data!)
 
 const parameterManager = new ParameterManager();
 const fftManager = new FftManager(parameterManager.advisedFft());
@@ -264,6 +267,7 @@ let complexity = 0;
 let circles = false;
 let hasCapture = false;
 let steps = false;
+let playwait = 4096.0 / fftSize;
 
 const parameterAutoplay = document.getElementById('autoplay-parameter-check') as HTMLInputElement;
 parameterAutoplay.oninput = function () {
@@ -352,6 +356,10 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 									parameterSlider.value = w;
 									break;
 
+								case 'rangemax':
+									parameterSlider.max = w;
+									break;
+
 								case 'replay':
 									repeatplay = parameterReplay.checked = Boolean(Number(w));
 									break;
@@ -416,7 +424,7 @@ function setLocation(complement: string | null) {
     if (complement === null)
         return;
 
-    const newRelativePathQuery = window.location.pathname + '?' + 'autoplay=' + Number(autoplay) + '&' + 'range=' + parameter + '&' + 'replay=' + Number(repeatplay) + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
+    const newRelativePathQuery = window.location.pathname + '?' + 'autoplay=' + Number(autoplay) + '&' + 'range=' + parameter + '&' + 'rangemax=' + parameterSlider.max + '&' + 'replay=' + Number(repeatplay) + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
     history.pushState(null, '', newRelativePathQuery);
 }
 
@@ -652,20 +660,14 @@ function autoplayCallback() {
 	if (!autoplay)
 		return;
 	if (parameterSlider.value === parameterSlider.max)
-		if (!repeatplay)
+		if (!repeatplay) {
+			autoplay = parameterAutoplay.checked = false;
 			return;
-		else
+		} else
 			parameterSlider.value = parameterSlider.min;
 
 	parameterSlider.valueAsNumber++;
-	dispatchEvent(parameterSlider);
+	parameterSlider.oninput?.(event);
 
-	setTimeout(autoplayCallback, 100);
-}
-
-function dispatchEvent(element: HTMLInput) {
-	const event = document.createEvent('Event');
-	event.initEvent('input', true, true);
-
-	element.dispatchEvent(event);
+	setTimeout(autoplayCallback, playwait);
 }
