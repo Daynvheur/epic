@@ -20,7 +20,6 @@ let repeatplay = false;
 let complexity = 0;
 let circles = false;
 let hasCapture = false;
-let steps = false;
 let playwait = 4096.0 / fftSize;
 
 const parameterAutoplay = document.getElementById('autoplay-parameter-check') as HTMLInputElement;
@@ -52,15 +51,6 @@ complexityCircles.oninput = function() {
 	circles = complexityCircles.checked;
 	redraw();
 };
-const pointSteps = document.getElementById('points-steps-check') as HTMLInputElement;
-pointSteps.oninput = function() {
-	steps = pointSteps.checked;
-	pointsStepsPoint.hidden
-		= !(pointsStepsLabel.hidden
-			= steps);
-};
-const pointsStepsPoint = document.getElementById('points-steps-check-point') as HTMLInputElement;
-const pointsStepsLabel = document.getElementById('points-steps-check-label') as HTMLInputElement;
 
 function updateCanvasSize() {
 	canvas.width = window.devicePixelRatio * canvas.clientWidth;
@@ -73,10 +63,6 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 			switch (item) {
 				case 'circles':
 					circles = complexityCircles.checked = true;
-					break;
-
-				case 'steps':
-					steps = pointSteps.checked = true;
 					break;
 
 				case 'autoplay':
@@ -135,10 +121,6 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
 										if (f !== null && m !== null && p !== null)
 											components.push({ frequency: Number(f), magnitude: Number(m), phase: Number(p) });
 									}
-									break;
-
-								case 'steps':
-									steps = pointSteps.checked = Boolean(Number(w));
 									break;
 							}
 						}
@@ -200,7 +182,7 @@ function setComponentsLocation() {
 }
 
 function setLocation(complement: string) {
-	const newRelativePathQuery = window.location.pathname + '?' + 'autoplay=' + Number(autoplay) + '&' + 'range=' + parameter + '&' + 'rangemax=' + parameterSlider.max + '&' + 'replay=' + Number(repeatplay) + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + '&' + 'steps=' + Number(steps) + complement;
+	const newRelativePathQuery = window.location.pathname + '?' + 'autoplay=' + Number(autoplay) + '&' + 'range=' + parameter + '&' + 'rangemax=' + parameterSlider.max + '&' + 'replay=' + Number(repeatplay) + '&' + 'complexity=' + complexity + '&' + 'fft=' + fftSize + '&' + 'circles=' + Number(circles) + complement;
 	history.pushState(null, '', newRelativePathQuery);
 }
 
@@ -212,10 +194,6 @@ function initControls() {
 	complexity = complexityNumber.valueAsNumber;
 
 	circles = complexityCircles.checked;
-	steps = pointSteps.checked;
-	pointsStepsPoint.hidden
-		= !(pointsStepsLabel.hidden
-			= steps);
 
 	redraw();
 	autoplayCallback();
