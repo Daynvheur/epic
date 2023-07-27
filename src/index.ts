@@ -266,7 +266,7 @@ let repeatplay = false;
 let complexity = 0;
 let circles = false;
 let hasCapture = false;
-let playwait = 4096.0 / fftSize;
+let playwait = 20480.0 / fftSize;
 
 const parameterAutoplay = document.getElementById('autoplay-parameter-check') as HTMLInputElement;
 parameterAutoplay.oninput = function () {
@@ -488,11 +488,12 @@ loadLocation();
 initControls();
 
 canvas.onpointerdown = function(e) {
-    if (e.button === 0) {
+	if (e.button === 0) {
         parameterManager.hasCapture = true;
-        canvas.setPointerCapture(e.pointerId);
-        addPoint(e.offsetX, e.offsetY);
-    }
+		autoplay = false;
+		canvas.setPointerCapture(e.pointerId);
+		addPoint(e.offsetX, e.offsetY);
+	}
 };
 
 canvas.ontouchstart = canvas.ontouchmove = function(e) {
@@ -509,10 +510,13 @@ canvas.onpointerup = function(e) {
     if (parameterManager.hasCapture) {
         parameterManager.hasCapture = false;
         canvas.releasePointerCapture(e.pointerId);
+        autoplay = parameterAutoplay.checked;
+        autoplayCallback();
     }
 };
 
-document.getElementById('clear-button')!.onclick = function() {
+document.getElementById('clear-button')!.onclick = function () {
+    autoplay = parameterAutoplay.checked = false;
     componentsManager.clear();
     redraw();
 };
@@ -588,12 +592,13 @@ function redraw() {
 
                 componentsManager.pushLine({ x: newX, y: newY }); // Draw the line starting from old to new coords
 
-				x = newX;
-				y = newY;
+					x = newX;
+					y = newY;
+				}
+				circlePath[p] = path; // Store computation
 			}
 			context.strokeStyle = 'burlywood';
-			context.stroke();
-			// store computed circlePath for this parameter
+			context.stroke(circlePath[p]);
 
             context.beginPath();
             const firstLine = componentsManager.lines[0];
@@ -623,7 +628,99 @@ function redraw() {
             context.strokeStyle = 'green';
             context.stroke();
         }
-    }
+}
+/*
+function redraw() {
+	context.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+	context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+	if (unclosedLength > 0) {
+		if (closedPath === null) { // Compute closedPath?
+			closedPath = new Path2D(unclosedPath);
+			closedPath.closePath();
+		}
+		context.strokeStyle = 'black';
+		context.stroke(closedPath);
+	}
+
+	if (components.length > 0) {
+		const maxI = Math.min(components.length, (complexity <= 0 ? components.length : (complexity + 1))), pi2 = 2 * Math.PI, p = (parameter * pi2 / fftSize), _x = 0, _y = 0;
+
+		if (circles) { // Draw arcs?
+			if (!(p in circlePath)) { // Compute circlePath[p]?
+				const path = new Path2D();
+
+				let x = _x, y = _y;
+
+				for (let i = 0; i < maxI; i++) {
+					const component = components[i];
+					const angle = p * component.frequency + component.phase;
+					const newX = x + component.magnitude * Math.cos(angle);
+					const newY = y + component.magnitude * Math.sin(angle);
+
+					if (i < 1)
+						lines.splice(0, lines.length); // Reset lines
+					else { // (min first segment)
+						const ray = Math.sqrt(Math.pow(newX - x, 2) + Math.pow(newY - y, 2));
+						path.moveTo(x, y); // Move to the center, drawing a line to the right most circle point (0°)
+						path.arc(x, y, ray, 0, pi2); // Draw the circle starting from 0 rad (0°) to 2*PI rad (360°)
+						// path.arc do take the x-rightmost point as 0rad, and pathes cursor from the previous position to the modulated position of the center+ray distance circle.
+						// path.arc(A, B, Math.Pi, 2 * Math.Pi) will draw a top-half circle (having it's center on [A, B]), with a line reaching [A, B] if the cursor was not already on this position.
+						// ^ There is no use to begin circles from the [newX, newY] point, as it'd still require the ray calculation, and introduces a new angle -> angle + 2*PI calculation.
+					}
+
+					lines.push({ x: newX, y: newY }); // Draw the line starting from old to new coords
+
+					x = newX;
+					y = newY;
+				}
+				circlePath[p] = path; // Store computation
+			}
+			context.strokeStyle = 'burlywood';
+			context.stroke(circlePath[p]);
+
+			if (!(p in linePath)) { // Compute linePath[p]?
+				const path = new Path2D();
+				path.moveTo(lines[0].x, lines[0].y);
+				for (let i = 1; i < lines.length; i++)
+					path.lineTo(lines[i].x, lines[i].y);
+				linePath[p] = path; // Store computation
+			}
+			context.strokeStyle = 'red';
+			context.stroke(linePath[p]);
+
+			lines.splice(0, lines.length); // Reset lines
+		} else {
+			if (!(p in linePath)) { // Compute linePath[p]?
+				const path = new Path2D();
+				drawComponentsLineIn(maxI, p, _x, _y, path);
+				linePath[p] = path; // Store computation
+			}
+			context.strokeStyle = 'red';
+			context.stroke(linePath[p]);
+		}
+
+		if (complexity > 0) { // Show complexity path
+			if (complexityPath === null) { // Compute complexityPath?
+				complexityPath = new Path2D();
+				for (let cp = 0; cp < fftSize; cp++)
+					drawComponentsLineOut(maxI, (cp * pi2 / fftSize), _x, _y, complexityPath);
+				drawComponentsLineOut(maxI, 0, _x, _y, complexityPath); // End loop
+			}
+			context.strokeStyle = 'green';
+			context.stroke(complexityPath);
+		}
+	}
+    	function drawComponentsLineIn(maxI: number, p: number, x: 0, y: 0, path: Path2D) {
+		for (let i = 0; i < maxI; i++) {
+			const component = components[i];
+			const angle = p * component.frequency + component.phase;
+			x += component.magnitude * Math.cos(angle);
+			y += component.magnitude * Math.sin(angle);
+			path.lineTo(x, y);
+		}
+	}
+*/
 
     function drawComponentsLineIn(maxI: number, p: number, x: 0, y: 0) {
         for (let i = 0; i < maxI; i++) {
@@ -635,14 +732,14 @@ function redraw() {
         }
     }
 
-	function drawComponentsLineOut(maxI: number, p: number, x: 0, y: 0) {
+	function drawComponentsLineOut(maxI: number, p: number, x: 0, y: 0, path: Path2D) {
 		for (let i = 0; i < maxI; i++) {
             const component = componentsManager.components[i];
 			const angle = p * component.frequency + component.phase;
 			x += component.magnitude * Math.cos(angle);
 			y += component.magnitude * Math.sin(angle);
 		}
-		context.lineTo(x, y);
+		path.lineTo(x, y);
 	}
 }
 
@@ -659,5 +756,5 @@ function autoplayCallback() {
 	parameterSlider.valueAsNumber++;
 	parameterSlider.oninput?.(event);
 
-	setTimeout(autoplayCallback, playwait);
+	setTimeout(autoplayCallback, Math.max(playwait, 5)); // 5ms wait time min (strict)
 }
