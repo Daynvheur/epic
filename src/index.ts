@@ -266,7 +266,6 @@ let repeatplay = false;
 let complexity = 0;
 let circles = false;
 let hasCapture = false;
-let steps = false;
 let playwait = 4096.0 / fftSize;
 
 const parameterAutoplay = document.getElementById('autoplay-parameter-check') as HTMLInputElement;
@@ -299,15 +298,6 @@ complexityCircles.oninput = function() {
     parameterManager.circles = complexityCircles.checked;
     redraw();
 };
-const pointSteps = document.getElementById('points-steps-check') as HTMLInputElement;
-pointSteps.oninput = function() {
-	steps = pointSteps.checked;
-	pointsStepsPoint.hidden
-		= !(pointsStepsLabel.hidden
-			= steps);
-};
-const pointsStepsPoint = document.getElementById('points-steps-check-point') as HTMLInputElement;
-const pointsStepsLabel = document.getElementById('points-steps-check-label') as HTMLInputElement;
 
 function updateCanvasSize() {
 	canvas.width = window.devicePixelRatio * canvas.clientWidth;
