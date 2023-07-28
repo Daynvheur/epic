@@ -48,6 +48,7 @@ fftNumber.oninput = function() {
 const complexityNumber = document.getElementById('complexity-number') as HTMLInputElement;
 complexityNumber.oninput = function() {
 	complexity = complexityNumber.valueAsNumber;
+	complexityPath = null;
 	redraw();
 };
 const complexityCircles = document.getElementById('complexity-circles-check') as HTMLInputElement;
@@ -141,7 +142,7 @@ function changeFftSize(w: number) {
 				fftSize /= 2;
 			parameter = Math.floor(parameterSlider.valueAsNumber * fftSize / Number(parameterSlider.max));
 		} else {
-			while (fftSize < w && fftSize < Number(fftNumber.max))
+			while (fftSize < w) // && fftSize < Number(fftNumber.max))
 				fftSize *= 2;
 			parameter = Math.round(parameterSlider.valueAsNumber * fftSize / Number(parameterSlider.max));
 		}
@@ -356,7 +357,7 @@ function redraw() {
 			if (!(p in circlePath)) { // Compute circlePath[p]?
 				const path = new Path2D();
 
-				let x = _x, y = _y, ray = 1;
+				let x = _x, y = _y, ray;
 
 				for (let i = 0; i < maxI; i++) {
 					const component = components[i];
@@ -366,7 +367,7 @@ function redraw() {
 
 					if (i < 1)
 						lines.splice(0, lines.length); // Reset lines
-					else if (ray >= 1) { // (min first segment)
+					else { // (min first segment)
 						ray = magnitude(newX - x, newY - y);
 						path.moveTo(x, y); // Move to the center, drawing a line to the right most circle point (0°)
 						path.arc(x, y, ray, 0, pi2); // Draw the circle starting from 0 rad (0°) to 2*PI rad (360°)
@@ -406,7 +407,7 @@ function redraw() {
 			context.stroke(linePath[p]);
 		}
 
-		if (complexity > 0) { // Show complexity path
+		if (complexity > 0 && !hasCapture) { // Show complexity path
 			if (complexityPath === null) { // Compute complexityPath?
 				complexityPath = new Path2D();
 				for (let cp = 0; cp < fftSize; cp++)
