@@ -650,7 +650,7 @@ function redraw() {
 			if (!(p in circlePath)) { // Compute circlePath[p]?
 				const path = new Path2D();
 
-				let x = _x, y = _y;
+				let x = _x, y = _y, ray = 1;
 
 				for (let i = 0; i < maxI; i++) {
 					const component = components[i];
@@ -660,8 +660,8 @@ function redraw() {
 
 					if (i < 1)
 						lines.splice(0, lines.length); // Reset lines
-					else { // (min first segment)
-						const ray = Math.sqrt(Math.pow(newX - x, 2) + Math.pow(newY - y, 2));
+					else if (ray >= 1) { // (min first segment)
+						ray = magnitude(newX - x, newY - y);
 						path.moveTo(x, y); // Move to the center, drawing a line to the right most circle point (0°)
 						path.arc(x, y, ray, 0, pi2); // Draw the circle starting from 0 rad (0°) to 2*PI rad (360°)
 						// path.arc do take the x-rightmost point as 0rad, and pathes cursor from the previous position to the modulated position of the center+ray distance circle.
