@@ -1,4 +1,5 @@
 import FFT from 'fft.js';
+let startTime: number, elapsedTime: number;
 
 class Xy {
     constructor(public x: number, public y: number) { }
@@ -647,6 +648,7 @@ function redraw() {
 		const maxI = Math.min(components.length, (complexity <= 0 ? components.length : (complexity + 1))), pi2 = 2 * Math.PI, p = (parameter * pi2 / fftSize), _x = 0, _y = 0;
 
 		if (circles) { // Draw arcs?
+			StartTime('circlePath');
 			if (!(p in circlePath)) { // Compute circlePath[p]?
 				const path = new Path2D();
 
@@ -676,9 +678,12 @@ function redraw() {
 				}
 				circlePath[p] = path; // Store computation
 			}
+
 			context.strokeStyle = 'burlywood';
 			context.stroke(circlePath[p]);
+			ElapsedTime('circlePath');
 
+			StartTime('linePath');
 			if (!(p in linePath)) { // Compute linePath[p]?
 				const path = new Path2D();
 				path.moveTo(lines[0].x, lines[0].y);
@@ -688,9 +693,11 @@ function redraw() {
 			}
 			context.strokeStyle = 'red';
 			context.stroke(linePath[p]);
+			ElapsedTime('linePath');
 
 			lines.splice(0, lines.length); // Reset lines
 		} else {
+			StartTime('linePath2');
 			if (!(p in linePath)) { // Compute linePath[p]?
 				const path = new Path2D();
 				drawComponentsLineIn(maxI, p, _x, _y, path);
@@ -698,9 +705,11 @@ function redraw() {
 			}
 			context.strokeStyle = 'red';
 			context.stroke(linePath[p]);
+			ElapsedTime('linePath2');
 		}
 
 		if (complexity > 0 && !hasCapture) { // Show complexity path
+			StartTime('complexityPath');
 			if (complexityPath === null) { // Compute complexityPath?
 				complexityPath = new Path2D();
 				for (let cp = 0; cp < fftSize; cp++)
@@ -709,9 +718,42 @@ function redraw() {
 			}
 			context.strokeStyle = 'green';
 			context.stroke(complexityPath);
+			ElapsedTime('complexityPath');
 		}
 	}
-    	function drawComponentsLineIn(maxI: number, p: number, x: 0, y: 0, path: Path2D) {
+
+Starting timer circlePath
+index.ts:475 3.7999999998137355 on circlePath
+index.ts:469 Starting timer linePath
+index.ts:475 0.2999999998137355 on linePath
+index.ts:469 Starting timer complexityPath
+index.ts:475 755.4000000003725 on complexityPath
+index.ts:469 Starting timer circlePath
+index.ts:475 2.599999999627471 on circlePath
+index.ts:469 Starting timer linePath
+index.ts:475 0.2999999998137355 on linePath
+index.ts:469 Starting timer complexityPath
+index.ts:475 736 on complexityPath
+index.ts:469 Starting timer circlePath
+index.ts:475 3.400000000372529 on circlePath
+index.ts:469 Starting timer linePath
+index.ts:475 0.20000000018626451 on linePath
+index.ts:469 Starting timer complexityPath
+index.ts:475 676.0999999996275 on complexityPath
+index.ts:469 Starting timer circlePath
+index.ts:475 2.099999999627471 on circlePath
+index.ts:469 Starting timer linePath
+index.ts:475 0.6999999992549419 on linePath
+index.ts:469 Starting timer complexityPath
+index.ts:475 653.2999999998137 on complexityPath
+index.ts:469 Starting timer circlePath
+index.ts:475 3.599999999627471 on circlePath <- drawComponentsLineOut!!
+index.ts:469 Starting timer linePath
+index.ts:475 0.19999999925494194 on linePath
+index.ts:469 Starting timer complexityPath
+index.ts:475 552.2000000001863 on complexityPath
+
+	function drawComponentsLineIn(maxI: number, p: number, x: 0, y: 0, path: Path2D) {
 		for (let i = 0; i < maxI; i++) {
 			const component = components[i];
 			const angle = p * component.frequency + component.phase;
@@ -757,4 +799,14 @@ function autoplayCallback() {
 	parameterSlider.oninput?.(event);
 
 	setTimeout(autoplayCallback, Math.max(playwait, 5)); // 5ms wait time min (strict)
+}
+
+function StartTime(timer: string) {
+	console.log('Starting timer ' + timer);
+	startTime = performance.now();
+}
+
+function ElapsedTime(timer: string) {
+	elapsedTime = performance.now() - startTime;
+	console.log(elapsedTime + ' on ' + timer);
 }
