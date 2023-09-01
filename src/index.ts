@@ -1,5 +1,5 @@
 import FFT from 'fft.js';
-let startTime: number, elapsedTime: number;
+/* DEBUG!/let startTime: number, elapsedTime: number;/* !DEBUG */
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d')!;
@@ -232,8 +232,10 @@ canvas.onpointerup = function(e) {
 	if (hasCapture) {
 		hasCapture = false;
 		canvas.releasePointerCapture(e.pointerId);
-		autoplay = parameterAutoplay.checked;
-		autoplayCallback();
+		if ((autoplay = parameterAutoplay.checked) === true)
+			autoplayCallback();
+		else
+			redraw();
 	}
 };
 
@@ -281,19 +283,19 @@ function addPoint(x: number, y: number, draw = true) {
 }
 
 function computeFft() {
-	if (unclosedLength > 0) {
-		samplePathIntoInput();
-		fft.transform(output, input);
-		calculateSortedComponentsFromOutput();
-
-		// reset computed Paths here
-		closedPath = null;
-		complexityPath = null;
-		circlePath = [];
-		linePath = [];
-		return true;
-	} else
+	if (unclosedLength <= 0)
 		return false;
+
+	samplePathIntoInput();
+	fft.transform(output, input);
+	calculateSortedComponentsFromOutput();
+
+	// reset computed Paths here
+	closedPath = null;
+	complexityPath = null;
+	circlePath = [];
+	linePath = [];
+	return true;
 }
 
 function samplePathIntoInput() {
@@ -354,7 +356,7 @@ function redraw() {
 		const maxI = Math.min(components.length, (complexity <= 0 ? components.length : (complexity + 1))), pi2 = 2 * Math.PI, p = (parameter * pi2 / fftSize), _x = 0, _y = 0;
 
 		if (circles) { // Draw arcs?
-			StartTime('circlePath');
+			/* DEBUG!/StartTime('circlePath');/* !DEBUG */
 			if (!(p in circlePath)) { // Compute circlePath[p]?
 				const path = new Path2D();
 
@@ -387,9 +389,9 @@ function redraw() {
 
 			context.strokeStyle = 'burlywood';
 			context.stroke(circlePath[p]);
-			ElapsedTime('circlePath');
+			/* DEBUG!/ElapsedTime('circlePath');/* !DEBUG */
 
-			StartTime('linePath');
+			/* DEBUG!/StartTime('linePath');/* !DEBUG */
 			if (!(p in linePath)) { // Compute linePath[p]?
 				const path = new Path2D();
 				path.moveTo(lines[0].x, lines[0].y);
@@ -399,11 +401,11 @@ function redraw() {
 			}
 			context.strokeStyle = 'red';
 			context.stroke(linePath[p]);
-			ElapsedTime('linePath');
+			/* DEBUG!/ElapsedTime('linePath');/* !DEBUG */
 
 			lines.splice(0, lines.length); // Reset lines
 		} else {
-			StartTime('linePath2');
+			/* DEBUG!/StartTime('linePath2');/* !DEBUG */
 			if (!(p in linePath)) { // Compute linePath[p]?
 				const path = new Path2D();
 				drawComponentsLineIn(maxI, p, _x, _y, path);
@@ -411,11 +413,11 @@ function redraw() {
 			}
 			context.strokeStyle = 'red';
 			context.stroke(linePath[p]);
-			ElapsedTime('linePath2');
+			/* DEBUG!/ElapsedTime('linePath2');/* !DEBUG */
 		}
 
 		if (complexity > 0 && !hasCapture) { // Show complexity path
-			StartTime('complexityPath');
+			/* DEBUG!/StartTime('complexityPath');/* !DEBUG */
 			if (complexityPath === null) { // Compute complexityPath?
 				complexityPath = new Path2D();
 				for (let cp = 0; cp < fftSize; cp++)
@@ -424,7 +426,7 @@ function redraw() {
 			}
 			context.strokeStyle = 'green';
 			context.stroke(complexityPath);
-			ElapsedTime('complexityPath');
+			/* DEBUG!/ElapsedTime('complexityPath');/* !DEBUG */
 		}
 	}
 	/*
@@ -470,6 +472,14 @@ index.ts:475 552.2000000001863 on complexityPath
 		}
 	}
 
+	function drawComponentsCallable(maxI: number, p: number, bla: CallableFunction) {
+		for (let i = 0; i < maxI; i++) {
+			const component = components[i];
+			const angle = p * component.frequency + component.phase;
+			bla(angle);
+		}
+	}
+
 	function drawComponentsLineOut(maxI: number, p: number, x: 0, y: 0, path: Path2D) {
 		for (let i = 0; i < maxI; i++) {
 			const component = components[i];
@@ -497,6 +507,7 @@ function autoplayCallback() {
 	setTimeout(autoplayCallback, Math.max(playwait, 5)); // 5ms wait time min (strict)
 }
 
+/* DEBUG!/
 function StartTime(timer: string) {
 	console.log('Starting timer ' + timer);
 	startTime = performance.now();
@@ -506,3 +517,4 @@ function ElapsedTime(timer: string) {
 	elapsedTime = performance.now() - startTime;
 	console.log(elapsedTime + ' on ' + timer);
 }
+/* !DEBUG */
