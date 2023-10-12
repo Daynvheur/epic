@@ -3,8 +3,10 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+.vs/*
 *.code-workspace
 .history/
 node_modules
 /dist/
 /.parcel-cache/
+.cache/*
