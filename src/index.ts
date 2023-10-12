@@ -498,8 +498,9 @@ canvas.onpointerdown = function(e) {
 };
 
 canvas.ontouchstart = canvas.ontouchmove = function(e) {
-	if (e.touches.length === 1)
+	if (e.touches.length >= 1) {
 		e.preventDefault();
+	}
 };
 
 canvas.onpointermove = function(e) {
