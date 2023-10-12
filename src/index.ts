@@ -49,12 +49,13 @@ fftNumber.oninput = function() {
 const complexityNumber = document.getElementById('complexity-number') as HTMLInputElement;
 complexityNumber.oninput = function() {
 	complexity = complexityNumber.valueAsNumber;
-	complexityPath = null;
+	computeFft();
 	redraw();
 };
 const complexityCircles = document.getElementById('complexity-circles-check') as HTMLInputElement;
 complexityCircles.oninput = function() {
 	circles = complexityCircles.checked;
+	computeFft();
 	redraw();
 };
 
@@ -219,8 +220,9 @@ canvas.onpointerdown = function(e) {
 };
 
 canvas.ontouchstart = canvas.ontouchmove = function(e) {
-	if (e.touches.length === 1)
+	if (e.touches.length >= 1) {
 		e.preventDefault();
+	}
 };
 
 canvas.onpointermove = function(e) {
