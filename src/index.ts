@@ -48,75 +48,138 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
                     break;
 
                 default: { // no-case-declaration
-                        const [k, v] = item.split('=');
+                    const [k, v] = item.split('=');
                     if (v === null)
                         return; // Restriction to valued keys
 
-                            const w = v && decodeURIComponent(v);
-                            switch (k) {
-                                case 'pt':
-                                    { // no-case-declaration
-                                        const [x, y] = w.split(';');
-                                        if (x !== null && y !== null)
-                                            addPoint(Number(x), Number(y), false);
-                                    }
-                                    break;
+                    const w = v && decodeURIComponent(v);
+                    switch (k) {
+                        case 'pt':
+                            if (w.startsWith('|')) // format &pt=|;|;|...
+                                w.substring(1).split('|').forEach(loadPoint);
+                            else // format &pt=;&pt=;&pt=...
+                                loadPoint(w);
+                            break;
 
-                                case 'range':
-                                    parameterSlider.value = w;
-                                    break;
+                        case 'range':
+                            parameterSlider.value = w;
+                            break;
 
-                                case 'circles':
-                                    complexityCircles.checked = Boolean(Number(w));
-                                    break;
+                        case 'circles':
+                            complexityCircles.checked = Boolean(Number(w));
+                            break;
 
-                                case 'complexity':
-                                    complexityNumber.value = w;
-                                    break;
+                        case 'complexity':
+                            complexityNumber.value = w;
+                            break;
 
-                                case 'fftsize':
-                                    fftSize = Number(w);
-                                    fft = new FFT(fftSize);
-                                    input = fft.createComplexArray() as number[];
-                                    output = fft.createComplexArray() as number[];
-                                    break;
+                        case 'fftsize':
+                            fftSize = Number(w);
+                            fft = new FFT(fftSize);
+                            input = fft.createComplexArray() as number[];
+                            output = fft.createComplexArray() as number[];
+                            break;
 
-                                case 'cp':
-                                    { // no-case-declaration
-                                        const [f, m, p] = w.split(';');
-                                        if (f !== null && m !== null && p !== null)
-                                            components.push({ frequency: Number(f), magnitude: Number(m), phase: Number(p) });
-                                    }
-                                    break;
-                            }
+                        case 'cp':
+                            if (w.startsWith('|')) // format &cp=|;;|;;|...
+                                w.substring(1).split('|').forEach(loadComponent);
+                            else // format &cp=;;&cp=;;&cp=...
+                                loadComponent(w);
+                            break;
+
+                        case 'encode': { // no-case-declaration
+                            const [e, t, c] = w.split(';');
+                            processDecode(c, t, e);
                         }
+                            break;
+                    }
+                }
                     break;
             }
         });
 }
 
-function setPointsLocation() {
-    let pointsString = '';
-    if (points.length > 0) {
-        const lastPt = points[points.length - 1];
-        pointsString += `&pt=${lastPt.x};${lastPt.y}`; // Starting by the last point (to close the loop)
-        const maxI = Math.min(256, points.length - 1), scaleI = points.length / maxI;
-        for (let i = 0; i < maxI; i++) {
-            const pt = points[Math.floor(i * scaleI)]; // Scaling resolution up to 256 pts
-            pointsString += `&pt=${pt.x};${pt.y}`;
+function loadPoint(w: string) {
+    const [x, y] = w.split(';');
+    if (x !== null && y !== null)
+        addPoint(Number(x), Number(y), false);
+}
+
+function loadComponent(w: string) {
+    const [f, m, p] = w.split(';');
+    if (f !== null && m !== null && p !== null)
+        components.push({ frequency: Number(f), magnitude: Number(m), phase: Number(p) });
+}
+
+function setPointsLocation(encode: string | null = null) {
+    if (points.length <= 0)
+        return;
+
+    let pointsString: string;
+    switch (encode) {
+        case 'atob':
+        case 'btoa': { // no-case-declaration
+            const maxI = Math.min(256, points.length);
+            pointsString = `&encode=${encode};pt;${encodeBtoa(() => {
+                const rePoints: Array<{ x: number, y: number, segmentLength: number } | undefined> = Array.from(points), nbFloat32 = 2, view = new Float32Array(new ArrayBuffer(maxI * nbFloat32 * 4));
+                const lastPt = points[points.length - 1], scaleI = points.length / maxI;
+                let i = 0;
+                view[i] = lastPt.x; // Starting by the last point (to close the loop)
+                view[i + 1] = lastPt.y;
+                for (i = 1; i <= maxI; i++) {
+                    const h = i - 1, j = i * nbFloat32, pt = points[Math.floor(h * scaleI)];
+                    view[j] = pt.x;
+                    view[j + 1] = pt.y;
+                }
+
+                return view;
+            })}`;
+        }
+            break;
+
+        default: { // no-case-declaration
+            const lastPt = points[points.length - 1];
+            pointsString = `&pt=|${lastPt.x};${lastPt.y}`; // Starting by the last point (to close the loop)
+            const maxI = Math.min(256, points.length - 1), scaleI = points.length / maxI;
+            for (let i = 0; i < maxI; i++) {
+                const pt = points[Math.floor(i * scaleI)]; // Scaling resolution up to 256 pts
+                pointsString += `|${pt.x};${pt.y}`;
+            }
         }
     }
-
     setLocation(pointsString);
 }
 
-function setComponentsLocation() {
-    let componentsString = '';
-    if (components.length > 0) {
-        const maxI = Math.min(256, components.length - 1);
-        for (let i = 0; i < maxI; i++) {
-            const cp = components[i]; // Keeping resolution up to 256 components
-            componentsString += `&cp=${cp.frequency};${cp.magnitude};${cp.phase}`;
+function setComponentsLocation(encode: string | null = null) {
+    if (components.length <= 0)
+        return;
+
+    let componentsString: string;
+    switch (encode) {
+        case 'atob':
+        case 'btoa': { // no-case-declaration
+            const maxI = Math.min(256, components.length - 1);
+            componentsString = `&encode=${encode};cp;${encodeBtoa(() => {
+                const nbFloat32 = 3, view = new Float32Array(new ArrayBuffer(maxI * 3 * 4)); // RangeError: byte length of Float32Array should be a multiple of 4 (needs a padding to be at complete 4)
+                components.forEach((cp, i) => {
+                    const j = i * nbFloat32;
+                    view[j] = cp.frequency;
+                    view[j + 1] = cp.magnitude;
+                    view[j + 2] = cp.phase;
+                })
+
+                return view;
+            })}`;
+        }
+            break;
+
+        default: { // no-case-declaration
+            componentsString = `&cp=`;
+            const maxI = Math.min(256, components.length - 1);
+            for (let i = 0; i < maxI; i++) {
+                const cp = components[i]; // Keeping resolution up to 256 components
+                componentsString += `|${cp.frequency};${cp.magnitude};${cp.phase}`;
+            }
         }
     }
 
@@ -126,6 +189,52 @@ function setComponentsLocation() {
 function setLocation(complement: string) {
     const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameter + '&' + 'complexity=' + complexity + '&' + 'circles=' + Number(circles) + complement;
     history.pushState(null, '', newRelativePathQuery);
+}
+
+function encodeBtoa(setView: () => Float32Array) {
+    let binary = '', chunkSize = 0x8000;
+    const bytes = new Uint8Array(setView().buffer); // Buffer to deplete
+
+    for (let i = 0; i < bytes.length; i += chunkSize)
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize)); // bytes->binary
+
+    return btoa(binary);
+}
+
+function decodeBtoa(str: string, unsetView: (view: Float32Array) => void) {
+    const binary = atob(str);
+    const bytes = new Uint8Array(binary.length); // Buffer to complete
+
+    for (let i = 0; i < binary.length; i++)
+        bytes[i] = binary.charCodeAt(i); // binary->bytes
+
+    return unsetView(new Float32Array(bytes.buffer));
+}
+
+function processDecode(complement: string, type: string, encode: string | null) {
+    switch (encode) {
+        case 'atob':
+        case 'btoa':
+            switch (type) {
+                case 'pt':
+                    return decodeBtoa(complement, view => {
+                        for (let i = 0; i < view.length; i += 2)
+                            addPoint(view[i], view[i + 1], false);
+                    });
+
+                case 'cp':
+                    return decodeBtoa(complement, view => {
+                        for (let i = 0; i < view.length; i += 3)
+                            components.push({ frequency: view[i], magnitude: Number(view[i + 1]), phase: Number(view[i + 2]) });
+                    });
+
+                default:
+                    return atob(complement);
+            }
+
+        default:
+            return complement;
+    }
 }
 
 function initControls() {
@@ -178,8 +287,10 @@ document.getElementById('clear-button')!.onclick = function() {
     redraw();
 };
 
-document.getElementById('save-points-button')!.onclick = setPointsLocation;
-document.getElementById('save-components-button')!.onclick = setComponentsLocation;
+document.getElementById('save-points-raw-button')!.onclick = () => setPointsLocation();
+document.getElementById('save-points-b64-button')!.onclick = () => setPointsLocation("btoa");
+document.getElementById('save-components-raw-button')!.onclick = () => setComponentsLocation();
+document.getElementById('save-components-b64-button')!.onclick = () => setComponentsLocation("btoa");
 
 function magnitude(x: number, y: number) {
     return Math.sqrt(x * x + y * y);
