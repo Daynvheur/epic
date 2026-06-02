@@ -40,17 +40,18 @@ function updateCanvasSize() {
 }
 
 function loadLocation() { // Inspiration from https://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript/21152762#21152762 (qd's not stored)
-    window.location.search?.substr(1).split('&')
+    window.location.search?.substring(1).split('&')
         .forEach(item => {
             switch (item) {
                 case 'circles':
                     complexityCircles.checked = true;
                     break;
 
-                default:
-                    { // no-case-declaration
+                default: { // no-case-declaration
                         const [k, v] = item.split('=');
-                        if (v !== null) { // Restriction to valued keys
+                    if (v === null)
+                        return; // Restriction to valued keys
+
                             const w = v && decodeURIComponent(v);
                             switch (k) {
                                 case 'pt':
@@ -89,7 +90,6 @@ function loadLocation() { // Inspiration from https://stackoverflow.com/question
                                     break;
                             }
                         }
-                    }
                     break;
             }
         });
@@ -154,13 +154,13 @@ canvas.onpointerdown = function(e) {
 };
 
 canvas.ontouchstart = canvas.ontouchmove = function(e) {
-    if (e.touches.length === 1) {
+    if (e.touches.length === 1)
         e.preventDefault();
-    }
 };
 
 canvas.onpointermove = function(e) {
-    if (hasCapture) addPoint(e.offsetX, e.offsetY);
+    if (hasCapture)
+        addPoint(e.offsetX, e.offsetY);
 };
 
 canvas.onpointerup = function(e) {
@@ -181,14 +181,18 @@ document.getElementById('clear-button')!.onclick = function() {
 document.getElementById('save-points-button')!.onclick = setPointsLocation;
 document.getElementById('save-components-button')!.onclick = setComponentsLocation;
 
-function magnitude(x: number, y: number) { return Math.sqrt(x * x + y * y); }
+function magnitude(x: number, y: number) {
+    return Math.sqrt(x * x + y * y);
+}
 
-function lerp(first: number, second: number, t: number) { return first + (second - first) * t; }
+function lerp(first: number, second: number, t: number) {
+    return first + (second - first) * t;
+}
 
 function addPoint(x: number, y: number, draw = true) {
-    if (points.length === 0) {
+    if (points.length === 0)
         points.push({ x, y, segmentLength: 0 });
-    } else {
+    else {
         const previousPoint = points[Math.max(0, points.length - 2)];
         const segmentLength = magnitude(x - previousPoint.x, y - previousPoint.y);
         unclosedLength += segmentLength;
@@ -206,11 +210,11 @@ function addPoint(x: number, y: number, draw = true) {
         samplePathIntoInput();
         fft.transform(output, input);
         calculateSortedComponentsFromOutput();
-    } else {
+    } else
         components.splice(0, components.length);
-    }
 
-    if (draw) redraw();
+    if (draw)
+        redraw();
 }
 
 function samplePathIntoInput() {
@@ -283,9 +287,9 @@ function redraw() {
                     // context.arc do take the x-rightmost point as 0rad, and pathes cursor from the previous position to the modulated position of the center+ray distance circle.
                     // context.arc(A, B, Math.Pi, 2 * Math.Pi) will draw a top-half circle (having it's center on [A, B]), with a line reaching [A, B] if the cursor was not already on this position.
                     // ^ There is no use to begin circles from the [newX, newY] point, as it'd still require the ray calculation, and introduces a new angle -> angle + 2*PI calculation.
-                } else {
+                } else
                     lines.splice(0, lines.length); // Reset lines
-                }
+
                 lines.push({ x: newX, y: newY }); // Draw the line starting from old to new coords
 
                 x = newX;
@@ -296,9 +300,9 @@ function redraw() {
 
             context.beginPath();
             context.moveTo(lines[0].x, lines[0].y);
-            for (let i = 1; i < lines.length; i++) {
+            for (let i = 1; i < lines.length; i++)
                 context.lineTo(lines[i].x, lines[i].y);
-            }
+
             context.strokeStyle = 'red';
             context.stroke();
 
@@ -312,9 +316,9 @@ function redraw() {
 
         if (complexity > 0) { // Show complexity path
             context.beginPath();
-            for (let cp = 0; cp < fftSize; cp++) {
+            for (let cp = 0; cp < fftSize; cp++)
                 drawComponentsLineOut(maxI, (cp * pi2 / fftSize), _x, _y);
-            }
+
             drawComponentsLineOut(maxI, 0, _x, _y); // End loop
             context.strokeStyle = 'green';
             context.stroke();
