@@ -121,7 +121,7 @@ function setPointsLocation(encode: string | null = null) {
         case 'btoa': { // no-case-declaration
             const maxI = Math.min(256, points.length);
             pointsString = `&encode=${encode};pt;${encodeBtoa(() => {
-                const rePoints: Array<{ x: number, y: number, segmentLength: number } | undefined> = Array.from(points), nbFloat32 = 2, view = new Float32Array(new ArrayBuffer(maxI * nbFloat32 * 4));
+                const nbFloat32 = 2, view = new Float32Array(new ArrayBuffer(maxI * nbFloat32 * 4));
                 const lastPt = points[points.length - 1], scaleI = points.length / maxI;
                 let i = 0;
                 view[i] = lastPt.x; // Starting by the last point (to close the loop)
@@ -166,7 +166,7 @@ function setComponentsLocation(encode: string | null = null) {
                     view[j] = cp.frequency;
                     view[j + 1] = cp.magnitude;
                     view[j + 2] = cp.phase;
-                })
+                });
 
                 return view;
             })}`;
@@ -174,7 +174,7 @@ function setComponentsLocation(encode: string | null = null) {
             break;
 
         default: { // no-case-declaration
-            componentsString = `&cp=`;
+            componentsString = '&cp=';
             const maxI = Math.min(256, components.length - 1);
             for (let i = 0; i < maxI; i++) {
                 const cp = components[i]; // Keeping resolution up to 256 components
@@ -192,8 +192,8 @@ function setLocation(complement: string) {
 }
 
 function encodeBtoa(setView: () => Float32Array) {
-    let binary = '', chunkSize = 0x8000;
-    const bytes = new Uint8Array(setView().buffer); // Buffer to deplete
+    let binary = '';
+    const chunkSize = 0x8000, bytes = new Uint8Array(setView().buffer); // Buffer to deplete
 
     for (let i = 0; i < bytes.length; i += chunkSize)
         binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize)); // bytes->binary
@@ -288,9 +288,9 @@ document.getElementById('clear-button')!.onclick = function() {
 };
 
 document.getElementById('save-points-raw-button')!.onclick = () => setPointsLocation();
-document.getElementById('save-points-b64-button')!.onclick = () => setPointsLocation("btoa");
+document.getElementById('save-points-b64-button')!.onclick = () => setPointsLocation('btoa');
 document.getElementById('save-components-raw-button')!.onclick = () => setComponentsLocation();
-document.getElementById('save-components-b64-button')!.onclick = () => setComponentsLocation("btoa");
+document.getElementById('save-components-b64-button')!.onclick = () => setComponentsLocation('btoa');
 
 function magnitude(x: number, y: number) {
     return Math.sqrt(x * x + y * y);
