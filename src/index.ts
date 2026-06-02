@@ -30,7 +30,7 @@ class FftManager {
     private min: number = 2;
     private max: number = 65536;
     private _fftUnderSize: number = this.fftSize - 1;
-    private fft: any = new FFT(this.fftSize);
+    private fft = new FFT(this.fftSize);
     private input: number[] = [];
     private output: number[] = [];
     private lastChange: number = performance.now();
@@ -111,7 +111,7 @@ class FftManager {
         else
             return 0;
     }
-};
+}
 
 class ComponentsManager {
     components: Component[] = [];
@@ -215,7 +215,7 @@ class ComponentsManager {
         return pointsString;
     }
 
-    setComponentsLocation(encode: string | null): string |null {
+    setComponentsLocation(encode: string | null): string | null {
         if (this.components.length <= 0)
             return null;
 
@@ -357,7 +357,7 @@ function setComponentsLocation(encode: string | null = null) {
 }
 
 function setLocation(complement: string | null) {
-    if (complement == null)
+    if (complement === null)
         return;
 
     const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameterManager.parameter + '&' + 'complexity=' + parameterManager.complexity + '&' + 'circles=' + Number(parameterManager.circles) + complement;
@@ -486,7 +486,7 @@ function addPoint(x: number, y: number) {
     redraw();
 
     const dt = performance.now() - t0;
-    var changeFft = fftManager.adaptFft(dt)
+    const changeFft = fftManager.adaptFft(dt);
     if (changeFft)
         fftManager.changeFftSize(changeFft > 0 ? fftManager.fftSize << changeFft : fftManager.fftSize >> -changeFft);
 }
