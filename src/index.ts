@@ -14,7 +14,7 @@ class Component {
     constructor(public frequency: number, public magnitude: number, public phase: number) { }
 }
 
-class ParameterManager {
+class ParametersManager {
     constructor(public parameter: number = 0, public complexity: number = 0, public circles: boolean = false, public hasCapture: boolean = false, public isMobile: boolean = /Mobi|Android/i.test(navigator.userAgent), public cores: number = navigator.hardwareConcurrency ?? 8) { }
 
     advisedFft() {
@@ -26,7 +26,7 @@ class FftManager {
     get fftSize() { return this._fftSize; }
     get fftUnderSize() { return this._fftUnderSize.toString(); }
 
-    private _fftSize: number = parameterManager.advisedFft();
+    private _fftSize: number = parametersManager.advisedFft();
     private min: number = 2;
     private max: number = 65536;
     private _fftUnderSize: number = this.fftSize - 1;
@@ -254,23 +254,23 @@ class ComponentsManager {
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d')!;
 
-const parameterManager = new ParameterManager();
-const fftManager = new FftManager(parameterManager.advisedFft());
+const parametersManager = new ParametersManager();
+const fftManager = new FftManager(parametersManager.advisedFft());
 const componentsManager = new ComponentsManager();
 
 const parameterSlider = document.getElementById('parameter-slider') as HTMLInputElement;
 parameterSlider.oninput = function() {
-    parameterManager.parameter = parameterSlider.valueAsNumber;
+    parametersManager.parameter = parameterSlider.valueAsNumber;
     redraw();
 };
 const complexityNumber = document.getElementById('complexity-number') as HTMLInputElement;
 complexityNumber.oninput = function() {
-    parameterManager.complexity = complexityNumber.valueAsNumber;
+    parametersManager.complexity = complexityNumber.valueAsNumber;
     redraw();
 };
 const complexityCircles = document.getElementById('complexity-circles-check') as HTMLInputElement;
 complexityCircles.oninput = function() {
-    parameterManager.circles = complexityCircles.checked;
+    parametersManager.circles = complexityCircles.checked;
     redraw();
 };
 
@@ -360,7 +360,7 @@ function setLocation(complement: string | null) {
     if (complement === null)
         return;
 
-    const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parameterManager.parameter + '&' + 'complexity=' + parameterManager.complexity + '&' + 'circles=' + Number(parameterManager.circles) + complement;
+    const newRelativePathQuery = window.location.pathname + '?' + 'range=' + parametersManager.parameter + '&' + 'complexity=' + parametersManager.complexity + '&' + 'circles=' + Number(parametersManager.circles) + complement;
     history.pushState(null, '', newRelativePathQuery);
 }
 
@@ -413,12 +413,12 @@ function processDecode(complement: string, type: string, encode: string | null) 
 function initControls() {
     const fftUnderSize = fftManager.fftUnderSize;
     parameterSlider.max = fftUnderSize;
-    parameterManager.parameter = parameterSlider.valueAsNumber;
+    parametersManager.parameter = parameterSlider.valueAsNumber;
 
     complexityNumber.max = fftUnderSize;
-    parameterManager.complexity = complexityNumber.valueAsNumber;
+    parametersManager.complexity = complexityNumber.valueAsNumber;
 
-    parameterManager.circles = complexityCircles.checked;
+    parametersManager.circles = complexityCircles.checked;
     redraw();
 }
 
@@ -429,7 +429,7 @@ initControls();
 
 canvas.onpointerdown = function(e) {
     if (e.button === 0) {
-        parameterManager.hasCapture = true;
+        parametersManager.hasCapture = true;
         canvas.setPointerCapture(e.pointerId);
         addPoint(e.offsetX, e.offsetY);
     }
@@ -441,13 +441,13 @@ canvas.ontouchstart = canvas.ontouchmove = function(e) {
 };
 
 canvas.onpointermove = function(e) {
-    if (parameterManager.hasCapture)
+    if (parametersManager.hasCapture)
         addPoint(e.offsetX, e.offsetY);
 };
 
 canvas.onpointerup = function(e) {
-    if (parameterManager.hasCapture) {
-        parameterManager.hasCapture = false;
+    if (parametersManager.hasCapture) {
+        parametersManager.hasCapture = false;
         canvas.releasePointerCapture(e.pointerId);
     }
 };
@@ -503,9 +503,9 @@ function redraw() {
     }
 
     if (componentsManager.components.length > 0) {
-        const maxI = Math.min(componentsManager.components.length, (parameterManager.complexity <= 0 ? componentsManager.components.length : (parameterManager.complexity + 1))), pi2 = 2 * Math.PI, p = (parameterManager.parameter * pi2 / fftManager.fftSize), _x = 0, _y = 0;
+        const maxI = Math.min(componentsManager.components.length, (parametersManager.complexity <= 0 ? componentsManager.components.length : (parametersManager.complexity + 1))), pi2 = 2 * Math.PI, p = (parametersManager.parameter * pi2 / fftManager.fftSize), _x = 0, _y = 0;
 
-        if (parameterManager.circles) { // Draw arcs?
+        if (parametersManager.circles) { // Draw arcs?
             let x = _x, y = _y;
             context.beginPath();
             for (let i = 0; i < maxI; i++) {
@@ -550,7 +550,7 @@ function redraw() {
             context.stroke();
         }
 
-        if (parameterManager.complexity > 0) { // Show complexity path
+        if (parametersManager.complexity > 0) { // Show complexity path
             context.beginPath();
             for (let cp = 0; cp < fftManager.fftSize; cp++)
                 drawComponentsLineOut(maxI, (cp * pi2 / fftManager.fftSize), _x, _y);
