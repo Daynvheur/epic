@@ -40,7 +40,7 @@ class FftManager {
     }
 
     changeFftSize(fftSize: number) {
-        //console.log('Changing FFT size to', fftSize);
+        // console.log('Changing FFT size to', fftSize);
         this._fftSize = fftSize;
         this._fftUnderSize = fftSize - 1;
         this.fft = new FFT(fftSize);
@@ -105,7 +105,7 @@ class FftManager {
             return 0;
         else if (dt > 256 && this._fftSize > this.min) // Really awfull performances
             return -2;
-        else if (dt >=28 && this._fftSize > this.min) // Mostly bad performances
+        else if (dt >= 28 && this._fftSize > this.min) // Mostly bad performances
             return -1;
         else if (dt < 6 && this._fftSize < this.max) // Really good performances
             return +1;
@@ -526,7 +526,7 @@ function addPoint(x: number, y: number) {
 
     const dt = performance.now() - t0;
     const changeFft = fftManager.adaptFft(dt);
-    //console.log('FFT adapt:', { dt, changeFft, fftSize: fftManager.fftSize });
+    // console.log('FFT adapt:', { dt, changeFft, fftSize: fftManager.fftSize });
     if (changeFft)
         fftManager.changeFftSize(changeFft > 0 ? fftManager.fftSize << changeFft : fftManager.fftSize >> -changeFft);
 }
