@@ -205,8 +205,8 @@ class ComponentsManager {
             case 'btoa-na': { // no-case-declaration
                 const maxI = Math.min(4096, this.points.length);
                 pointsString = `&encode=${encode};pt;${encodeBtoa(() => {
-                    const nbFloat32 = 2, view = new Float32Array(new ArrayBuffer(maxI * nbFloat32 * 4));
-                    let lastPt: Xy = this.points[this.points.length - 1], scaleI = this.points.length / maxI;
+                    const nbFloat32 = 2, view = new Float32Array(new ArrayBuffer(maxI * nbFloat32 * 4)), scaleI = this.points.length / maxI;
+                    let lastPt: Xy = this.points[this.points.length - 1];
                     let i = 0;
                     view[i] = lastPt.x; // Starting by the last point (to close the loop)
                     view[i + 1] = lastPt.y;
@@ -438,6 +438,9 @@ function processDecode(complement: string, type: string, encode: string | null) 
                             componentsManager.addPoint(prevPoint.x, prevPoint.y);
                         }
                     });
+
+                default:
+                    return complement;
             }
 
         default:
