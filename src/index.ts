@@ -151,7 +151,7 @@ class ComponentsManager {
         push(this.points, point);
     }
 
-    setPointLength(point: PointSegment, x: number, y: number) {
+    setPointSegment(point: PointSegment, x: number, y: number) {
         point.segmentLength = magnitude(point.x - x, point.y - y);
     }
 
@@ -165,7 +165,7 @@ class ComponentsManager {
 
             this.points.splice(this.points.length - 1, 0, { x, y, segmentLength });
 
-            this.setPointLength(this.points[this.points.length - 1], x, y);
+            this.setPointSegment(this.points[this.points.length - 1], x, y);
         }
 
         this.unclosedPath.lineTo(x, y);
