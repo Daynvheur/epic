@@ -391,14 +391,14 @@ function processDecode(complement: string, type: string, encode: string | null) 
             switch (type) {
                 case 'pt':
                     return decodeBtoa(complement, view => {
-                        for (let i = 0; i < view.length; i += 2)
-                            componentsManager.addPoint(view[i], view[i + 1]);
+                        for (let i = 0; i < view.length;)
+                            componentsManager.addPoint(view[i++], view[i++]);
                     });
 
                 case 'cp':
                     return decodeBtoa(complement, view => {
-                        for (let i = 0; i < view.length; i += 3)
-                            componentsManager.pushComponent({ frequency: view[i], magnitude: Number(view[i + 1]), phase: Number(view[i + 2]) });
+                        for (let i = 0; i < view.length;)
+                            componentsManager.pushComponent({ frequency: view[i++], magnitude: view[i++], phase: view[i++] });
                     });
 
                 default:
