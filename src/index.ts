@@ -223,6 +223,12 @@ class ComponentsManager {
             }
                 break;
 
+            case 'ehas-na': { // no-case-declaration
+                const maxI = this.points.length; // No need for the limit anymore, thanks to the encoding
+                pointsString = `&encode=${encode};pt;${encodePointsToEhas(this.points)}`;
+            }
+                break;
+
             default: { // no-case-declaration
                 const lastPt = this.points[this.points.length - 1];
                 pointsString = `&pt=|${lastPt.x};${lastPt.y}`; // Starting by the last point (to close the loop)
@@ -405,6 +411,99 @@ function decodeBtoa(str: string, unsetView: (view: Float32Array) => void) {
     return unsetView(new Float32Array(bytes.buffer));
 }
 
+const extendedHexAugmentedShortTable = [
+// Naming is composed of "Extended Hex Table" (inspired by the https://www.rfc-editor.org/info/rfc4648/#section-7 Table 4: The "Extended Hex" Base 32 aLphabet, order similarly), "Augmented" because it features 64 values, "Short" because it does not feature a 65th padding character
+// REQUIREMENTS:
+// - table.length MUST be a power of two (2, 4, 8, 16, 32, 64, ...)
+// - characters MUST be distinct (and preferably non-reseved)
+// - table.length MUST be >= 2
+// - encoding table MUST match decoding table (same order, same chars)
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+    'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+    'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+    'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+    'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+    'u', 'v', 'w', 'x', 'y', 'z', '-', '_',
+    // Sadly, á translates as %C3%A in the URL so this super-extended 128 table doesn't work at reducing char count.
+    // At least, it does works as a cool proof of concept. Still, 32, 16, and 8 work as intended.
+    // I did not check lower variants, but I suspect problems arise with 4 or less character tables, due to Position overflowing the character availability count.
+    //'!', '$', '(', ')', '*', ',', '~', 'À',
+    //'Á', 'Â', 'Ã', 'Ä', 'Å', 'Ç', 'È', 'É',
+    //'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ',
+    //'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú',
+    //'Û', 'Ü', 'Ý', 'à', 'á', 'â', 'ã', 'ä',
+    //'å', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í',
+    //'î', 'ï', 'ð', 'ñ', 'ò', 'ó', 'ô', 'õ',
+    //'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ',
+];
+
+const mildlyNegativeEhas = extendedHexAugmentedShortTable.length / 2, ehasMask = extendedHexAugmentedShortTable.length - 1, ehasBitLengthFactor = bitLength(extendedHexAugmentedShortTable.length) - 1;
+
+function bitLength(n: number) { // Thanks to Copilot again.
+    if ((n & (n - 1)) !== 0)
+        throw new Error(`Table length must be a power of two, got ${n}`);
+
+    let bits = 0;
+    while (n > 0) {
+        bits++;
+        n >>= 1;
+    }
+    return bits;
+}
+
+function encodePointsToEhas(points: Xy[]) {
+    let lastPt: Xy = points[points.length - 1]; // Starting by the last point (to close the loop)
+    let ehasCodedBinary = encodeNumberToEhas(lastPt.x) + encodeNumberToEhas(lastPt.y);
+    let i = 0;
+    for (i = 0; i < points.length; i++) {
+        const pt = points[i];
+        ehasCodedBinary += encodeNumberToEhas(pt.x - lastPt.x) + encodeNumberToEhas(pt.y - lastPt.y); // Relative to the previous point (expected near)
+        lastPt = pt;
+    }
+
+    return ehasCodedBinary;
+}
+
+function encodeNumberToEhas(value: number) { // value is expected to be an integer
+    let position = 0, isNegative: boolean;
+    if (value < 0) {
+        value = ~value + 1; // 2-Complement the value if negative
+        isNegative = true;
+    }
+    else
+        isNegative = false;
+
+    let ehasCodedBinary = ''; // Table-coded representation of the number
+    while (value > 0) {
+        ehasCodedBinary += extendedHexAugmentedShortTable[value & ehasMask]; // Appends the lowest bits of the value
+        value >>= ehasBitLengthFactor; // Consumes the factor bits of the value
+        position++; // I do hope position will not grow above (mildlyNegativeEhas - 1) relative to its initialization
+    }
+
+    return extendedHexAugmentedShortTable[position + (isNegative ? mildlyNegativeEhas : 0)] // Variable-length prefix count
+        + ehasCodedBinary;
+}
+
+function decodeNumberFromEhas(ehasCodedBinary: string, ref: { position: number }) {
+    let byteCount = ehasCharToIndex(ehasCodedBinary.charAt(ref.position)); // Variable-length prefix count
+    const positive = (byteCount < mildlyNegativeEhas) || ((byteCount -= mildlyNegativeEhas) > mildlyNegativeEhas);
+
+    let value = 0;
+    for (let bytePosition = byteCount; bytePosition >= 1; bytePosition--)
+        value = (value << ehasBitLengthFactor) // Resumes the factor bits of the value
+            | ehasCharToIndex(ehasCodedBinary.charAt(bytePosition + ref.position)); // Appends the lowest bits of the value
+
+    ref.position += byteCount + 1;
+
+    return positive ? value : ~value + 1; // 2-Complement the value if negative
+
+    function ehasCharToIndex(char: string) {
+        return extendedHexAugmentedShortTable.findIndex((c) => c === char);
+    }
+}
+
 function processDecode(complement: string, type: string, encode: string | null) {
     switch (encode) {
         case 'atob':
@@ -439,6 +538,26 @@ function processDecode(complement: string, type: string, encode: string | null) 
                             componentsManager.addPoint(prevPoint.x, prevPoint.y);
                         }
                     });
+
+                default:
+                    return complement;
+            }
+
+        case 'ehas-na':
+            switch (type) {
+                case 'pt': { // no-case-declaration
+                    if (complement.length <= 0)
+                        return complement;
+
+                    const ref = { position: 0 };
+                    let prevPoint: Xy = { x: decodeNumberFromEhas(complement, ref), y: decodeNumberFromEhas(complement, ref) };
+                    componentsManager.addPoint(prevPoint.x, prevPoint.y); // First point is absolute
+                    while (ref.position < complement.length) {
+                        const pt = { x: decodeNumberFromEhas(complement, ref), y: decodeNumberFromEhas(complement, ref) };
+                        prevPoint = { x: prevPoint.x + pt.x, y: prevPoint.y + pt.y }; // Relative to the previous point (expected near)
+                        componentsManager.addPoint(prevPoint.x, prevPoint.y);
+                    }
+                }
 
                 default:
                     return complement;
@@ -497,7 +616,7 @@ document.getElementById('clear-button')!.onclick = function() {
 };
 
 document.getElementById('save-points-raw-button')!.onclick = () => setPointsLocation();
-document.getElementById('save-points-b64-button')!.onclick = () => setPointsLocation('btoa-na');
+document.getElementById('save-points-b64-button')!.onclick = () => setPointsLocation('ehas-na');
 document.getElementById('save-components-raw-button')!.onclick = () => setComponentsLocation();
 document.getElementById('save-components-b64-button')!.onclick = () => setComponentsLocation('btoa');
 
