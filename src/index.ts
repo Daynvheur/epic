@@ -223,10 +223,8 @@ class ComponentsManager {
             }
                 break;
 
-            case 'ehas-na': { // no-case-declaration
-                const maxI = this.points.length; // No need for the limit anymore, thanks to the encoding
+            case 'ehas-na':
                 pointsString = `&encode=${encode};pt;${encodePointsToEhas(this.points)}`;
-            }
                 break;
 
             default: { // no-case-declaration
@@ -429,14 +427,14 @@ const extendedHexAugmentedShortTable = [
     // Sadly, á translates as %C3%A in the URL so this super-extended 128 table doesn't work at reducing char count.
     // At least, it does works as a cool proof of concept. Still, 32, 16, and 8 work as intended.
     // I did not check lower variants, but I suspect problems arise with 4 or less character tables, due to Position overflowing the character availability count.
-    //'!', '$', '(', ')', '*', ',', '~', 'À',
-    //'Á', 'Â', 'Ã', 'Ä', 'Å', 'Ç', 'È', 'É',
-    //'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ',
-    //'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú',
-    //'Û', 'Ü', 'Ý', 'à', 'á', 'â', 'ã', 'ä',
-    //'å', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í',
-    //'î', 'ï', 'ð', 'ñ', 'ò', 'ó', 'ô', 'õ',
-    //'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ',
+    // '!', '$', '(', ')', '*', ',', '~', 'À',
+    // 'Á', 'Â', 'Ã', 'Ä', 'Å', 'Ç', 'È', 'É',
+    // 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ',
+    // 'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú',
+    // 'Û', 'Ü', 'Ý', 'à', 'á', 'â', 'ã', 'ä',
+    // 'å', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í',
+    // 'î', 'ï', 'ð', 'ñ', 'ò', 'ó', 'ô', 'õ',
+    // 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ',
 ];
 
 const mildlyNegativeEhas = extendedHexAugmentedShortTable.length / 2, ehasMask = extendedHexAugmentedShortTable.length - 1, ehasBitLengthFactor = bitLength(extendedHexAugmentedShortTable.length) - 1;
@@ -456,8 +454,7 @@ function bitLength(n: number) { // Thanks to Copilot again.
 function encodePointsToEhas(points: Xy[]) {
     let lastPt: Xy = points[points.length - 1]; // Starting by the last point (to close the loop)
     let ehasCodedBinary = encodeNumberToEhas(lastPt.x) + encodeNumberToEhas(lastPt.y);
-    let i = 0;
-    for (i = 0; i < points.length; i++) {
+    for (let i = 0; i < points.length; i++) {
         const pt = points[i];
         ehasCodedBinary += encodeNumberToEhas(pt.x - lastPt.x) + encodeNumberToEhas(pt.y - lastPt.y); // Relative to the previous point (expected near)
         lastPt = pt;
@@ -471,8 +468,7 @@ function encodeNumberToEhas(value: number) { // value is expected to be an integ
     if (value < 0) {
         value = ~value + 1; // 2-Complement the value if negative
         isNegative = true;
-    }
-    else
+    } else
         isNegative = false;
 
     let ehasCodedBinary = ''; // Table-coded representation of the number
@@ -504,7 +500,7 @@ function decodeNumberFromEhas(ehasCodedBinary: string, ref: { position: number }
     }
 }
 
-function processDecode(complement: string, type: string, encode: string | null) {
+function processDecode(complement: string, type: string, encode: string | null): string | void {
     switch (encode) {
         case 'atob':
         case 'btoa':
@@ -558,10 +554,12 @@ function processDecode(complement: string, type: string, encode: string | null) 
                         componentsManager.addPoint(prevPoint.x, prevPoint.y);
                     }
                 }
+                    break;
 
                 default:
                     return complement;
             }
+            break;
 
         default:
             return complement;
